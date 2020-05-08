@@ -1,0 +1,5 @@
+pika
+pytest
+requests
+sqlalchemy
+youtube_dl
