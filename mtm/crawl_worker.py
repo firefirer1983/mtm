@@ -30,17 +30,18 @@ def crawl_start_handler(channel, basic_deliver, properties, body):
     res = cwl.validate_url(url)
     print("validate: %r" % res)
     channel.basic_ack(basic_deliver.delivery_tag)
-    channel.basic_publish(
+
+    channel.publish_message(
         exchange="worker.mm",
         routing_key="crawler.validate.status",
-        body=json.dumps(res, ensure_ascii=True),
+        message=res,
     )
 
     cwl.download(url)
-    channel.basic_publish(
+    channel.publish_message(
         "worker.mm",
         routing_key="crawler.download.status",
-        body=json.dumps({"result": "finished"}, ensure_ascii=True),
+        message={"result": "finished"},
     )
 
 

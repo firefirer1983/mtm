@@ -11,5 +11,6 @@ def redirect_to_buffer():
         yield mystdout
     except Exception as e:
         print(e)
+        raise e
     finally:
         sys.stdout = _stdout

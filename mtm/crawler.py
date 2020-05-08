@@ -604,11 +604,12 @@ class Crawler:
             try:
                 self._setup(*validate_conf, url)
                 self._crawl()
+                print(b)
             except Exception as e:
                 print(e)
                 raise
             else:
-                return json.loads(b)
+                return b.getvalue()
 
     def download(self, url):
         try:

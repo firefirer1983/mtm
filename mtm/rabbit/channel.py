@@ -84,6 +84,7 @@ class Channel:
         self._rabbit_channel.deactivate_consumer_queue = (
             self.deactivate_consumer_queue
         )
+        self._rabbit_channel.publish_message = self.publish_message
         self.add_on_channel_close_callback()
         self.setup_exchanges()
 
@@ -120,7 +121,7 @@ class Channel:
             self._nacked,
         )
 
-    def publish_message(self, exchange, routing_key, hdrs, message):
+    def publish_message(self, exchange, routing_key, message, hdrs=None):
 
         if self._rabbit_channel is None or not self._rabbit_channel.is_open:
             return

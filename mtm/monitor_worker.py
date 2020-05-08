@@ -1,5 +1,6 @@
-from .base.poll import Poll
 import logging
+from .base.poll import Poll
+
 from .rabbit.binding import ConsumerBinding
 from .rabbit.exchange import TopicExchange
 from .rabbit.queue import RabbitQueue
@@ -11,13 +12,14 @@ status_binding = ConsumerBinding(
 )
 
 
-@status_binding.listen_on("crawler.start")
+@status_binding.listen_on(binding_key="crawler.*.status")
 def crawl_status_handler(channel, basic_deliver, properties, body):
     log.info("status:")
     log.info(channel)
     log.info(basic_deliver)
     log.info(properties)
     log.info(body)
+    channel.basic_ack(basic_deliver.delivery_tag)
 
 
 class MonitorPoll(Poll):
