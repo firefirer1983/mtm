@@ -1,6 +1,6 @@
 import os
 import abc
-from ..rabbit.channel import Channel
+from ..mq.channel import Channel
 
 amqp_url = os.environ.get("amqp_url", "amqp://guest:guest@localhost:5672/%2F")
 

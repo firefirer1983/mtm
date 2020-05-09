@@ -1,15 +1,12 @@
 import sys
-from os import path
 import logging
-
+from os import path
 sys.path.append(path.join(path.dirname(__file__), ".."))
-from mtm.monitor_worker import MonitorPoll
-
-log = logging.getLogger(__file__)
+from mtm.crawler import Crawler
 
 LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
               '-35s %(lineno) -5d: %(message)s')
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-    MonitorPoll().run()
+    Crawler().run()
