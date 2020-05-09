@@ -11,9 +11,12 @@ def main():
     ch = connection.channel()
     ch.basic_publish(
         exchange="worker.mm",
-        routing_key="crawler.start",
+        routing_key="request.upload",
         body=json.dumps(
-            {"url": "https://www.youtube.com/watch?v=PJ1QwhNL72A"},
+            {
+                "url": "https://www.youtube.com/watch?v=PJ1QwhNL72A",
+                "username": "xy",
+            },
             ensure_ascii=True,
         ),
     )

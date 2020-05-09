@@ -24,6 +24,10 @@ setuptools.setup(
     python_requires=">=3.7",
     install_requires=["requests", "pika", "sqlalchemy", "pymysql"],
     entry_points={
-        "console_scripts": ["init_db = mtm.model.models:create_all_tables"]
+        "console_scripts": [
+            "create_tables = mtm.model.models:create_all_tables",
+            "drop_tables = mtm.model.models:drop_all_tables",
+            "inject_users = scripts.user_inject:main",
+        ]
     },
 )

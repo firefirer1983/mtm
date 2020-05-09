@@ -3,4 +3,4 @@ pytest
 requests
 sqlalchemy
 youtube_dl
-click
+faker

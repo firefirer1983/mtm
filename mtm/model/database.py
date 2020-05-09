@@ -3,14 +3,30 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
+from contextlib import contextmanager
 
 log = logging.getLogger(__name__)
 
-db_url = os.environ.get("db", "mysql+pymysql://root:123456789@127.0.0.1:3306/mtm")
+db_url = os.environ.get(
+    "db", "mysql+pymysql://root:123456789@127.0.0.1:3306/mtm"
+)
 db_engine = create_engine(db_url)
 
 Session = sessionmaker(bind=db_engine)
+
+
+@contextmanager
+def scoped_session(auto_commit=True):
+    ssn = Session()
+    try:
+        yield ssn
+        if auto_commit:
+            ssn.commit()
+    except Exception as e:
+        ssn.rollback()
+        raise
+    finally:
+        ssn.close()
 
 
 class ScopedSession:
@@ -53,5 +69,3 @@ class MyBase(declarative_base()):
 
     def to_dict(self):
         return {col: getattr(self, col) for col in self.columns}
-
-
