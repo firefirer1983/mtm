@@ -1,15 +1,19 @@
+import os
 import json
 import pika
 import functools
 import logging
+from . import binding_registry
 
 APP_ID = "mtm"
 
 log = logging.getLogger(__name__)
 
+amqp_url = os.environ.get("amqp_url", "amqp://guest:guest@localhost:5672/%2F")
+
 
 class Channel:
-    def __init__(self, url, *bindings):
+    def __init__(self, url):
         self._url = url
         self._connection = pika.SelectConnection(
             parameters=pika.URLParameters(self._url),
@@ -18,7 +22,7 @@ class Channel:
             on_close_callback=self.on_connection_closed,
         )
         self._rabbit_channel = None
-        self._bindings = bindings
+        self._bindings = binding_registry
         self._stopping = False
         self._consumer_queue_count = 0
         self._poll_fn = None
@@ -141,7 +145,7 @@ class Channel:
         log.info("Published message # %i", self._message_number)
 
     def setup_exchanges(self):
-        log.error("bindings: %r", self._bindings)
+        log.info("bindings: %r", self._bindings)
         for binding in self._bindings:
             exchange = binding.exchange
             exchange.attach_channel(self._rabbit_channel)
@@ -212,3 +216,6 @@ class Channel:
                     self._connection.ioloop.start()
 
         log.info("Stopped")
+
+
+ch = Channel(amqp_url)

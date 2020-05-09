@@ -9,13 +9,14 @@ def main():
         parameters=URLParameters("amqp://guest:guest@localhost:5672/%2F")
     )
     ch = connection.channel()
+    ch.exchange_declare(exchange="worker.mm", exchange_type="topic")
     ch.basic_publish(
         exchange="worker.mm",
         routing_key="request.download",
         body=json.dumps(
             {
                 "url": "https://www.youtube.com/watch?v=PJ1QwhNL72A",
-                "username": "xy",
+                "username": "naeidzwwwwzlzzzz",
             },
             ensure_ascii=True,
         ),

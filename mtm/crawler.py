@@ -1,28 +1,24 @@
 import json
 import logging
 from .components.downloader import Downloader
-from .mq.binding import Binding, ConsumerBinding
-from .mq.exchange import TopicExchange
-from .mq.queue import RabbitQueue
+from .mq.binding import Producer, Consumer
 from .base.poll import Poll
 from .model.models import Transmission, TxStatus
 from .model.database import scoped_session
+from .mq.channel import ch
 
 
 log = logging.getLogger(__file__)
 
-action_binding = ConsumerBinding(
-    RabbitQueue("crawler_action_q"), TopicExchange("worker.mm"),
-)
 
-activity_status_binding = Binding(
-    RabbitQueue("crawling_activity_status_q"), TopicExchange("worker.mm"),
-)
+action_validate_consumer = Consumer("crawler_action_q", "worker.mm")
+action_download_consumer = Consumer("crawler_action_q", "worker.mm")
+activity_status_producer = Producer("crawling_activity_status_q", "worker.mm")
 
 
-@action_binding.listen_on("crawler.validate")
+@action_validate_consumer.listen_on("crawler.validate")
 def crawler_validate_handler(channel, basic_deliver, properties, body):
-    log.info(channel, basic_deliver, properties, body)
+    log.info("%r" % body)
     url = json.loads(body)["url"]
     channel.basic_ack(basic_deliver.delivery_tag)
 
@@ -44,9 +40,9 @@ def crawler_validate_handler(channel, basic_deliver, properties, body):
     )
 
 
-@action_binding.listen_on("crawler.download")
+@action_download_consumer.listen_on("crawler.download")
 def crawler_download_handler(channel, basic_deliver, properties, body):
-    log.info(channel, basic_deliver, properties, body)
+    log.info("%r" % body)
     url = json.loads(body)["url"]
     channel.basic_ack(basic_deliver.delivery_tag)
     with scoped_session() as ssn:
@@ -74,7 +70,7 @@ def crawler_download_handler(channel, basic_deliver, properties, body):
 
 class Crawler(Poll):
     def __init__(self):
-        super().__init__(action_binding, activity_status_binding)
+        super().__init__(ch, None)
         self.set_poll_interval(10)
 
     def poll(self):

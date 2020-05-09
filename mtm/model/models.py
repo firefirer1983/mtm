@@ -48,7 +48,7 @@ class User(MyBase, TimestampMixin):
 
     @classmethod
     def get_user(cls, ssn, username):
-        return ssn.query(cls).filter_by(username=username)
+        return ssn.query(cls).filter_by(username=username).one()
 
 
 class Transmission(MyBase, TimestampMixin):

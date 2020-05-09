@@ -28,6 +28,7 @@ setuptools.setup(
             "create_tables = mtm.model.models:create_all_tables",
             "drop_tables = mtm.model.models:drop_all_tables",
             "inject_users = scripts.user_inject:main",
+            "download_many = scripts.download_by_list:main",
         ]
     },
 )

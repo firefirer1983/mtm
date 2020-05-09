@@ -1,22 +1,15 @@
-import os
 import abc
-from ..mq.channel import Channel
-
-amqp_url = os.environ.get("amqp_url", "amqp://guest:guest@localhost:5672/%2F")
 
 
 class Poll(abc.ABC):
-    def __init__(self, *bindings):
+    def __init__(self, channel, db):
         self._poll_interval = 500
-        self._channel = self.init_mq(amqp_url, *bindings)
+        self._channel = channel
+        self._db = db
 
     @abc.abstractmethod
     def poll(self):
         pass
-
-    @staticmethod
-    def init_mq(url, *bindings):
-        return Channel(url, *bindings)
 
     @property
     def poll_interval(self):
@@ -32,3 +25,7 @@ class Poll(abc.ABC):
     @property
     def channel(self):
         return self._channel
+
+    @property
+    def db(self):
+        return self._db
