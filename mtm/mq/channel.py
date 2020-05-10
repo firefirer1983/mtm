@@ -3,7 +3,8 @@ import json
 import pika
 import functools
 import logging
-from . import binding_registry
+from . import rabbit_registry
+from types import MethodType
 
 APP_ID = "mtm"
 
@@ -22,7 +23,7 @@ class Channel:
             on_close_callback=self.on_connection_closed,
         )
         self._rabbit_channel = None
-        self._bindings = binding_registry
+        self._bindings = rabbit_registry.list_bindings()
         self._stopping = False
         self._consumer_queue_count = 0
         self._poll_fn = None
@@ -81,14 +82,17 @@ class Channel:
 
     def on_channel_open(self, channel):
         log.info("Channel opened")
+
+        channel.activate_consumer_queue = MethodType(
+            self.activate_consumer_queue, channel
+        )
+        channel.deactivate_consumer_queue = MethodType(
+            self.deactivate_consumer_queue, channel
+        )
+        channel.publish_json = MethodType(self.publish_json, channel)
+        channel.publish_message = MethodType(self.publish_message, channel)
+
         self._rabbit_channel = channel
-        self._rabbit_channel.activate_consumer_queue = (
-            self.activate_consumer_queue
-        )
-        self._rabbit_channel.deactivate_consumer_queue = (
-            self.deactivate_consumer_queue
-        )
-        self._rabbit_channel.publish_message = self.publish_message
         self.add_on_channel_close_callback()
         self.setup_exchanges()
 
@@ -125,13 +129,13 @@ class Channel:
             self._nacked,
         )
 
-    def publish_message(self, exchange, routing_key, message, hdrs=None):
+    def publish_json(self, exchange, routing_key, message, hdrs=None):
 
         if self._rabbit_channel is None or not self._rabbit_channel.is_open:
             return
 
         properties = pika.BasicProperties(
-            app_id=APP_ID, content_type="application/json", headers=hdrs,
+            app_id=APP_ID, content_type="application/json", headers=hdrs
         )
 
         self._rabbit_channel.basic_publish(
@@ -144,15 +148,31 @@ class Channel:
         self._deliveries.append(self._message_number)
         log.info("Published message # %i", self._message_number)
 
+    def publish_message(
+        self, exchange, routing_key, body, properties=None, mandatory=False
+    ):
+
+        if self._rabbit_channel is None or not self._rabbit_channel.is_open:
+            return
+
+        self._rabbit_channel.basic_publish(
+            exchange, routing_key, body, properties, mandatory
+        )
+        self._message_number += 1
+        self._deliveries.append(self._message_number)
+        log.info("Published message # %i", self._message_number)
+
     def setup_exchanges(self):
-        log.info("bindings: %r", self._bindings)
-        for binding in self._bindings:
-            exchange = binding.exchange
+        log.info("%r", self._bindings)
+        for b in self._bindings:
+            exchange = b.exchange
             exchange.attach_channel(self._rabbit_channel)
-            cb = functools.partial(exchange.setup_queues, binding)
+            if not b.is_consumer:
+                b.attach_channel(self._rabbit_channel)
+            cb = functools.partial(exchange.setup_queues, b)
             self._rabbit_channel.exchange_declare(
                 exchange=str(exchange),
-                exchange_type=binding.exchange.exchange_type,
+                exchange_type=b.exchange.exchange_type,
                 callback=cb,
             )
         self.enable_delivery_confirmations()

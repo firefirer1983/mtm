@@ -5,6 +5,20 @@ import logging
 log = logging.getLogger(__name__)
 
 
+def wrap_cb_with_ack(cb):
+    def _f(channel, basic_deliver, properties, body):
+        try:
+            ret = cb(channel, basic_deliver, properties, body)
+        except Exception as e:
+            log.exception(e)
+            raise
+        else:
+            channel.basic_ack(delivery_tag=basic_deliver.delivery_tag)
+        return ret
+
+    return _f
+
+
 class RabbitQueue:
     def __init__(self, queue_name, qos=1):
         self._name = queue_name
@@ -17,7 +31,7 @@ class RabbitQueue:
         self._on_message = None
 
     def register_on_message(self, cb):
-        self._on_message = cb
+        self._on_message = wrap_cb_with_ack(cb)
 
     def attach_channel(self, channel):
         self._channel = channel

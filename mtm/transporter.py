@@ -7,32 +7,34 @@ from .mq.channel import ch
 
 log = logging.getLogger(__file__)
 
-action_search_consumer = Consumer("transporter_action_q", "worker.mm")
-action_upload_consumer = Consumer("transporter_action_q", "worker.mm")
-activity_status_producer = Producer(
-    "transporting_activity_status_q", "worker.mm"
+
+search_status_publisher = Producer("transporting_search_status_q", "worker.mm")
+upload_status_publisher = Producer("transporting_upload_status_q", "worker.mm")
+
+
+@Consumer(
+    binding_key="transporter.search",
+    queue="transporter_search_q",
+    exchange="worker.mm",
 )
-
-
-@action_search_consumer.listen_on(binding_key="transporter.search")
-def transporter_search_handler(channel, basic_deliver, properties, body):
+def transporter_search_handler(*args, body):
     log.info("%r" % body)
     url = json.loads(body)["url"]
-    channel.basic_ack(basic_deliver.delivery_tag)
-    channel.publish_message(
-        exchange="worker.mm",
+    search_status_publisher.publish_json(
         routing_key="transporting.search.status",
         message={"search": "not found", "url": url},
     )
 
 
-@action_upload_consumer.listen_on(binding_key="transporter.upload")
-def transporter_upload_handler(channel, basic_deliver, properties, body):
+@Consumer(
+    binding_key="transporter.upload",
+    queue="transporter_upload_q",
+    exchange="worker.mm",
+)
+def transporter_upload_handler(*args, body):
     log.info("%r" % body)
     url = json.loads(body)["url"]
-    channel.basic_ack(basic_deliver.delivery_tag)
-    channel.publish_message(
-        exchange="worker.mm",
+    upload_status_publisher.publish_json(
         routing_key="transporting.upload.status",
         message={"upload": "finished", "url": url},
     )
