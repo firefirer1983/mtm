@@ -9,8 +9,13 @@ from pika import BasicProperties
 from .rabbit_ctx import rabbit_context
 
 from .channel import Channel
-from ...core.service.poll import Poll
-from cpg.core.mq import MessageConsumer, MessageProducer
+from ..base.poll import Poll
+from ..base.service import (
+    MessageConsumer,
+    MessageProducer,
+    RpcClient,
+    RpcServer,
+)
 from .binding import Binding
 
 
@@ -23,7 +28,7 @@ class RabbitConsumer(MessageConsumer):
     def __init__(self, binding_key, queue, exchange):
         self._binding = Binding(queue, exchange)
         self._binding.set_binding_key(binding_key)
-        self._binding.register_on_message_callback(self.on_message)
+        self._binding.queue.register_on_message_callback(self.on_message)
         rabbit_context.add_consumer(self)
 
     @property
@@ -53,31 +58,53 @@ class RabbitListener:
         return self._binding.queue.consumer_tag
 
     def __call__(self, cb):
-        self._binding.register_on_message_callback(cb)
+        self._binding.queue.register_on_message_callback(cb)
 
     @property
     def binding(self):
         return self._binding
 
 
-class RpcListener:
+class RabbitRpcServer(RpcServer):
     def __init__(self, queue):
-        self._binding = Binding(queue, None)
+        self._binding = Binding(queue, "default")
+        self._binding.set_binding_key(binding_key=str(self._binding.queue))
+        self._binding.queue.register_on_request_callback(self.on_request)
+        rabbit_context.add_consumer(self)
+
+    @property
+    def consumer_id(self):
+        return self._binding.queue.consumer_tag
+
+    def __str__(self):
+        return "<RabbitRpcServer> with binding:%s" % self._binding
+
+    @property
+    def binding(self):
+        return self._binding
+
+    def on_request(self, body):
+        pass
+
+
+class RabbitRpcListener:
+    def __init__(self, queue):
+        self._binding = Binding(queue, "default")
         self._binding.set_binding_key(binding_key=str(self._binding.queue))
         rabbit_context.add_consumer(self)
 
     def __call__(self, cb):
-        self._binding.queue.register_on_rpc_request_callback(cb)
+        self._binding.queue.register_on_request_callback(cb)
 
     @property
     def binding(self):
         return self._binding
 
 
-class RpcClient:
+class RabbitRpcClient(RpcClient):
     def __init__(self, routing_key, queue):
         self._routing_key = routing_key
-        self._binding = Binding(queue, None)
+        self._binding = Binding(queue, "default")
         self._rsp = None
         self._corr_id = None
 
@@ -104,7 +131,7 @@ class RpcClient:
         return "%s:%s" % (self._binding.queue, self._routing_key)
 
     def __call__(self):
-        self._binding.register_on_response_callback(self._on_response)
+        self._binding.queue.register_on_response_callback(self._on_response)
 
     def _on_response(self, body):
         self._rsp = body

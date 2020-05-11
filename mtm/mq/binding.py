@@ -1,5 +1,5 @@
 from .queue import RabbitQueue
-from .exchange import TopicExchange
+from .exchange import TopicExchange, default_exchange
 import logging
 
 log = logging.getLogger(__name__)
@@ -8,7 +8,10 @@ log = logging.getLogger(__name__)
 class Binding:
     def __init__(self, queue, exchange):
         self._queue = RabbitQueue(queue)
-        self._exchange = TopicExchange(exchange)
+        if exchange == "default":
+            self._exchange = default_exchange
+        else:
+            self._exchange = TopicExchange(exchange)
         self._channel = None
         self._is_consumer = False
 
@@ -44,4 +47,3 @@ class Binding:
 
     def __repr__(self):
         return str(self)
-

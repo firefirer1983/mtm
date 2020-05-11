@@ -1,7 +1,7 @@
 import json
 import logging
 from .components.downloader import Downloader
-from .mq import RabbitListener, RabbitProducer, RabbitPoll
+from .mq import RabbitListener, RabbitProducer, RabbitPoll, RabbitRpcListener
 from .model.models import Transmission, TxStatus
 from .model.database import scoped_session
 
@@ -69,6 +69,12 @@ def crawler_download_handler(msg):
         routing_key="crawling.download.status",
         message={"download": downloaded, "message": message, "url": url},
     )
+
+
+@RabbitRpcListener(queue="rcp_get_id")
+def crawler_rpc_get_id_handler(msg):
+    print(msg)
+    return "crawler rpc server"
 
 
 class Crawler(RabbitPoll):

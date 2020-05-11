@@ -30,20 +30,39 @@ class Exchange:
     def attach_channel(self, channel):
         self._channel = channel
 
-    def setup_queues(self, binding, _unused_frame):
+    def setup_queue(self, binding, _unused_frame):
         log.info(_unused_frame)
         log.info(binding)
         queue = binding.queue
         queue.attach_channel(self._channel)
-        if binding.is_consumer:
+
+        # Attention!
+        # Don't bind queue to default exchange'
+        if binding.exchange.is_default_exchange:
+            cb = queue.setup_qos
+        elif binding.is_consumer:
             cb = functools.partial(
                 queue.setup_binding, userdata=str(binding.exchange)
             )
         else:
             cb = None
-        self._channel.queue_declare(queue=str(queue), callback=cb)
+        self._channel.queue_declare(
+            queue=str(queue), callback=cb, exclusive=queue.is_exclusive
+        )
+
+    @property
+    def is_default_exchange(self):
+        return isinstance(self, DefaultExchange)
 
 
 class TopicExchange(Exchange):
     def __init__(self, exchange_name):
         super().__init__(exchange_name, "topic")
+
+
+class DefaultExchange(Exchange):
+    def __init__(self):
+        super().__init__("", None)
+
+
+default_exchange = DefaultExchange()

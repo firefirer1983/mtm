@@ -24,7 +24,7 @@ def wrap_rpc_request_with_ack(cb):
         try:
             ret = cb(body)
 
-            channel.basic_publish(
+            channel.publish_message(
                 exchange="",
                 routing_key=properties.reply_to,
                 properties=BasicProperties(
@@ -59,6 +59,8 @@ class RabbitQueue:
         self._consuming = False
         self._consumer_tag = None
         self._on_message = None
+        self._exclusive = False
+        self._auto_ack = False
 
     def register_on_message_callback(self, cb):
         self._on_message = wrap_cb_with_ack(cb)
@@ -67,7 +69,7 @@ class RabbitQueue:
         self._on_message = wrap_rpc_request_with_ack(cb)
 
     def register_on_response_callback(self, corr_id, cb):
-        self._on_message = wrap_rpc_response()
+        self._on_message = wrap_rpc_response(cb, corr_id)
 
     def attach_channel(self, channel):
         self._channel = channel
@@ -93,7 +95,7 @@ class RabbitQueue:
         log.info("Issuing consumer related RPC commands")
         self.add_on_cancel_callback()
         self._consumer_tag = self._channel.basic_consume(
-            self._name, self._on_message
+            self._name, self._on_message, auto_ack=self.is_auto_ack
         )
         self.was_consuming = True
         self._consuming = True
@@ -124,6 +126,20 @@ class RabbitQueue:
         self._channel.deactivate_consumer_queue()
         if self._channel.consumer_queue_count <= 0:
             self._channel.close_channel()
+
+    def set_exclusive(self):
+        self._exclusive = True
+
+    def set_auto_ack(self):
+        self._auto_ack = True
+
+    @property
+    def is_exclusive(self):
+        return self._exclusive
+
+    @property
+    def is_auto_ack(self):
+        return self._auto_ack
 
     def __str__(self):
         return str(self._name)

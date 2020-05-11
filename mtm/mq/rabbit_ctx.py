@@ -1,6 +1,6 @@
 from itertools import chain
 
-from cpg.core.context import Context
+from ..base.context import Context
 
 
 class RabbitContext(Context):

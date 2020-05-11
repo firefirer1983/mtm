@@ -137,12 +137,17 @@ class Channel:
             exchange.attach_channel(self._rabbit_channel)
             if not b.is_consumer:
                 b.attach_channel(self._rabbit_channel)
-            cb = functools.partial(exchange.setup_queues, b)
-            self._rabbit_channel.exchange_declare(
-                exchange=str(exchange),
-                exchange_type=b.exchange.exchange_type,
-                callback=cb,
-            )
+            if exchange.is_default_exchange:
+                exchange.setup_queue(b, None)
+            else:
+                log.info("exchange_declare:%s" % str(exchange))
+                cb = functools.partial(exchange.setup_queue, b)
+                self._rabbit_channel.exchange_declare(
+                    exchange=str(exchange),
+                    exchange_type=b.exchange.exchange_type,
+                    callback=cb,
+                )
+
         self.enable_delivery_confirmations()
 
     def close_channel(self):
