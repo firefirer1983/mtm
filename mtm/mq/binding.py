@@ -1,4 +1,3 @@
-from . import rabbit_registry
 from .queue import RabbitQueue
 from .exchange import TopicExchange
 import logging
@@ -11,6 +10,8 @@ class Binding:
     def __init__(self, queue, exchange):
         self._queue = RabbitQueue(queue)
         self._exchange = TopicExchange(exchange)
+        self._channel = None
+        self._is_consumer = False
         rabbit_registry.register(self)
 
     @property
@@ -21,9 +22,23 @@ class Binding:
     def queue(self):
         return self._queue
 
+    def set_binding_key(self, binding_key):
+        self._is_consumer = True
+        self._queue.binding_key = binding_key
+
     @property
     def is_consumer(self):
-        return isinstance(self, Consumer)
+        return self._is_consumer
+
+    def attach_channel(self, ch):
+        self._channel = ch
+
+    @property
+    def channel(self):
+        return self._channel
+
+    def register_on_message_callback(self, cb):
+        return self._queue.register_on_message_callback(cb)
 
     def __str__(self):
         return "<Binding(%s)> %s:%s" % (
@@ -36,61 +51,18 @@ class Binding:
         return str(self)
 
 
-class Consumer(Binding):
-    def __init__(self, binding_key, queue, exchange):
-        super().__init__(queue, exchange)
-        self.queue.binding_key = binding_key
+class RabbitRegistry:
+    def __init__(self):
+        self._bindings = set()
 
-    def __call__(self):
-        def _f(cb):
-            self._queue.register_on_message(cb)
+    def register(self, b):
+        self._bindings.add(b)
 
-        return _f
+    def unregister(self, bindings):
+        self._bindings.remove(bindings)
 
-    def consumer_tag(self):
-        return self.queue.consumer_tag
-
-
-class Producer(Binding):
-    def __init__(self, queue, exchange):
-        super().__init__(queue, exchange)
-        self._channel = None
-
-    def attach_channel(self, ch):
-        self._channel = ch
-
-    @property
-    def channel(self):
-        return self._channel
-
-    def publish_json(self, routing_key, message):
-        self.channel.publish_json(self.exchange, routing_key, message)
-
-    def ack_msg(self, delivery_tag):
-        self.channel.basic_ack(delivery_tag=delivery_tag)
+    def list_bindings(self):
+        return list(self._bindings)
 
 
-# class Listener(abc.ABC):
-#     def __init__(self, queue_name, exchange_name):
-#         self._queue = RabbitQueue(queue_name)
-#         self._exchange = TopicExchange(exchange_name)
-#         rabbit_registry.register(self)
-#
-#     @property
-#     def exchange(self):
-#         return self._exchange
-#
-#     @property
-#     def queue(self):
-#         return self._queue
-#
-#     @property
-#     def is_consumer(self):
-#         return True
-#
-#     @abc.abstractmethod
-#     def on_message(self, channel, basic_deliver, properties, body):
-#         pass
-#
-#     def listen_on(self, binding_key):
-#         self.queue.binding_key = binding_key
+rabbit_registry = RabbitRegistry()

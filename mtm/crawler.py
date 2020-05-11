@@ -1,29 +1,27 @@
 import json
 import logging
 from .components.downloader import Downloader
-from .mq.binding import Producer, Consumer
-from .base.poll import Poll
+from .mq import RabbitListener, RabbitProducer, RabbitPoll
 from .model.models import Transmission, TxStatus
 from .model.database import scoped_session
-from .mq.channel import ch
 
 
 log = logging.getLogger(__file__)
 
 
-status_publisher = Producer(
+status_publisher = RabbitProducer(
     queue="crawling_activity_status_q", exchange="worker.mm"
 )
 
 
-@Consumer(
+@RabbitListener(
     binding_key="crawler.validate",
     queue="crawler_action_validate_q",
     exchange="worker.mm",
 )
-def crawler_validate_handler(*args, body):
-    log.info("%r" % body)
-    url = json.loads(body)["url"]
+def crawler_validate_handler(msg):
+    log.info("%r" % msg)
+    url = json.loads(msg)["url"]
 
     valid = False
     with scoped_session() as s:
@@ -42,14 +40,14 @@ def crawler_validate_handler(*args, body):
     )
 
 
-@Consumer(
+@RabbitListener(
     binding_key="crawler.download",
     queue="crawler_action_download_q",
     exchange="worker.mm",
 )
-def crawler_download_handler(*args, body):
-    log.info("%r" % body)
-    url = json.loads(body)["url"]
+def crawler_download_handler(msg):
+    log.info("%r" % msg)
+    url = json.loads(msg)["url"]
 
     with scoped_session() as ssn:
         tx = Transmission.get_transmission(ssn, url)
@@ -73,10 +71,10 @@ def crawler_download_handler(*args, body):
     )
 
 
-class Crawler(Poll):
-    def __init__(self):
-        super().__init__(ch, None)
-        self.set_poll_interval(10)
+class Crawler(RabbitPoll):
+    def __init__(self, url):
+        super().__init__(url)
+        self.set_interval(10)
 
     def poll(self):
         log.debug("Transaction status polling alive!")

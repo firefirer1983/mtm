@@ -1,16 +1,11 @@
 import os
-import json
 import pika
 import functools
 import logging
-from . import rabbit_registry
+from mtm.mq.binding import rabbit_registry
 from types import MethodType
 
-APP_ID = "mtm"
-
 log = logging.getLogger(__name__)
-
-amqp_url = os.environ.get("amqp_url", "amqp://guest:guest@localhost:5672/%2F")
 
 
 class Channel:
@@ -22,8 +17,8 @@ class Channel:
             on_open_error_callback=self.on_connection_open_error,
             on_close_callback=self.on_connection_closed,
         )
-        self._rabbit_channel = None
         self._bindings = rabbit_registry.list_bindings()
+        self._rabbit_channel = None
         self._stopping = False
         self._consumer_queue_count = 0
         self._poll_fn = None
@@ -82,16 +77,10 @@ class Channel:
 
     def on_channel_open(self, channel):
         log.info("Channel opened")
-
-        channel.activate_consumer_queue = MethodType(
-            self.activate_consumer_queue, channel
-        )
-        channel.deactivate_consumer_queue = MethodType(
-            self.deactivate_consumer_queue, channel
-        )
-        channel.publish_json = MethodType(self.publish_json, channel)
-        channel.publish_message = MethodType(self.publish_message, channel)
-
+        # Need Refine
+        channel.activate_consumer_queue = self.activate_consumer_queue
+        channel.deactivate_consumer_queue = self.deactivate_consumer_queue
+        # end
         self._rabbit_channel = channel
         self.add_on_channel_close_callback()
         self.setup_exchanges()
@@ -129,25 +118,6 @@ class Channel:
             self._nacked,
         )
 
-    def publish_json(self, exchange, routing_key, message, hdrs=None):
-
-        if self._rabbit_channel is None or not self._rabbit_channel.is_open:
-            return
-
-        properties = pika.BasicProperties(
-            app_id=APP_ID, content_type="application/json", headers=hdrs
-        )
-
-        self._rabbit_channel.basic_publish(
-            exchange,
-            routing_key,
-            json.dumps(message, ensure_ascii=False),
-            properties,
-        )
-        self._message_number += 1
-        self._deliveries.append(self._message_number)
-        log.info("Published message # %i", self._message_number)
-
     def publish_message(
         self, exchange, routing_key, body, properties=None, mandatory=False
     ):
@@ -156,14 +126,14 @@ class Channel:
             return
 
         self._rabbit_channel.basic_publish(
-            exchange, routing_key, body, properties, mandatory
+            str(exchange), routing_key, body, properties, mandatory
         )
         self._message_number += 1
         self._deliveries.append(self._message_number)
         log.info("Published message # %i", self._message_number)
 
     def setup_exchanges(self):
-        log.info("%r", self._bindings)
+        log.info("bindings => %r", rabbit_registry.list_bindings())
         for b in self._bindings:
             exchange = b.exchange
             exchange.attach_channel(self._rabbit_channel)
@@ -236,6 +206,3 @@ class Channel:
                     self._connection.ioloop.start()
 
         log.info("Stopped")
-
-
-ch = Channel(amqp_url)

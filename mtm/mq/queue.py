@@ -7,8 +7,10 @@ log = logging.getLogger(__name__)
 
 def wrap_cb_with_ack(cb):
     def _f(channel, basic_deliver, properties, body):
+
         try:
-            ret = cb(channel, basic_deliver, properties, body)
+            print("============>", channel, basic_deliver, properties, body)
+            ret = cb(body)
         except Exception as e:
             log.exception(e)
             raise
@@ -30,7 +32,7 @@ class RabbitQueue:
         self._consumer_tag = None
         self._on_message = None
 
-    def register_on_message(self, cb):
+    def register_on_message_callback(self, cb):
         self._on_message = wrap_cb_with_ack(cb)
 
     def attach_channel(self, channel):
@@ -61,6 +63,7 @@ class RabbitQueue:
         )
         self.was_consuming = True
         self._consuming = True
+
         self._channel.activate_consumer_queue()
 
     def add_on_cancel_callback(self):

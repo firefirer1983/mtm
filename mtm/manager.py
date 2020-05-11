@@ -1,27 +1,27 @@
 import json
 import logging
-from .base.poll import Poll
 
-from .mq.binding import Consumer, Producer
+from .mq import RabbitListener, RabbitProducer, RabbitPoll
 from .model.models import Transmission, User
 from .model.database import scoped_session
-from .mq.channel import ch
 
 log = logging.getLogger(__file__)
 
-crawler_action_publisher = Producer("crawler_action_q", "worker.mm")
-transporter_action_publisher = Producer("transporter_action_q", "worker.mm")
+crawler_action_publisher = RabbitProducer("crawler_action_q", "worker.mm")
+transporter_action_publisher = RabbitProducer(
+    "transporter_action_q", "worker.mm"
+)
 
 
-@Consumer(
+@RabbitListener(
     binding_key="request.download",
     queue="request_download_q",
     exchange="worker.mm",
 )
-def download_request_handler(*args, body):
-    log.info("%r" % body)
-    url = json.loads(body)["url"]
-    username = json.loads(body)["username"]
+def download_request_handler(msg):
+    log.info("%r" % msg)
+    url = json.loads(msg)["url"]
+    username = json.loads(msg)["username"]
     if not Transmission.is_transmission_exist(url=url):
         with scoped_session(auto_commit=True) as s:
             user = User.get_user(s, username)
@@ -40,14 +40,14 @@ def download_request_handler(*args, body):
                 log.warning("Need to upload?")
 
 
-@Consumer(
+@RabbitListener(
     binding_key="request.upload",
     queue="request_upload_q",
     exchange="worker.mm",
 )
-def upload_request_handler(*args, body):
-    log.info("%r" % body)
-    url = json.loads(body)["url"]
+def upload_request_handler(msg):
+    log.info("%r" % msg)
+    url = json.loads(msg)["url"]
     if not Transmission.is_transmission_exist(url=url):
         log.warning("Please download stream before upload!")
         return
@@ -69,14 +69,14 @@ def upload_request_handler(*args, body):
             )
 
 
-@Consumer(
+@RabbitListener(
     binding_key="crawling.validate.status",
     queue="crawling_validate_status_q",
     exchange="worker.mm",
 )
-def validate_result_handler(*args, body):
-    log.info("%r" % body)
-    result = json.loads(body)
+def validate_result_handler(msg):
+    log.info("%r" % msg)
+    result = json.loads(msg)
     url = result["url"]
     valid = result["valid"]
     if valid:
@@ -87,14 +87,14 @@ def validate_result_handler(*args, body):
         log.warning("%s validate failed!" % url)
 
 
-@Consumer(
+@RabbitListener(
     binding_key="crawling.download.status",
     queue="crawling_download_status_q",
     exchange="worker.mm",
 )
-def download_result_handler(*args, body):
-    log.info("%r" % body)
-    result = json.loads(body)
+def download_result_handler(msg):
+    log.info("%r" % msg)
+    result = json.loads(msg)
     url = result["url"]
     download = result["download"]
     if download == "downloaded":
@@ -105,14 +105,14 @@ def download_result_handler(*args, body):
         log.warning("Download failed, sorry")
 
 
-@Consumer(
+@RabbitListener(
     binding_key="transporting.search.status",
     queue="transporting_search_status_q",
     exchange="worker.mm",
 )
-def search_result_handler(*args, body):
-    log.info("%r" % body)
-    result = json.loads(body)
+def search_result_handler(msg):
+    log.info("%r" % msg)
+    result = json.loads(msg)
     url = result["url"]
     search = result["search"]
     if search == "exist":
@@ -123,14 +123,14 @@ def search_result_handler(*args, body):
         )
 
 
-@Consumer(
+@RabbitListener(
     binding_key="transporting.upload.status",
     queue="transporting_upload_status_q",
     exchange="worker.mm",
 )
-def upload_result_handler(*args, body):
-    log.info("%r" % body)
-    result = json.loads(body)
+def upload_result_handler(msg):
+    log.info("%r" % msg)
+    result = json.loads(msg)
     url = result["url"]
     upload = result["upload"]
     if upload == "uploaded":
@@ -139,10 +139,10 @@ def upload_result_handler(*args, body):
         log.warning("Upload Fail! => %s" % url)
 
 
-class Manager(Poll):
-    def __init__(self):
-        super().__init__(ch, None)
-        self.set_poll_interval(10)
+class Manager(RabbitPoll):
+    def __init__(self, url):
+        super().__init__(url)
+        self.set_interval(10)
 
     def poll(self):
         log.debug("Manager polling alive!")
