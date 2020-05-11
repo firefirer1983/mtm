@@ -1,9 +1,7 @@
-import os
 import pika
 import functools
 import logging
-from mtm.mq.binding import rabbit_registry
-from types import MethodType
+from .rabbit_ctx import rabbit_context
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +15,7 @@ class Channel:
             on_open_error_callback=self.on_connection_open_error,
             on_close_callback=self.on_connection_closed,
         )
-        self._bindings = rabbit_registry.list_bindings()
+        self._bindings = rabbit_context.list_bindings()
         self._rabbit_channel = None
         self._stopping = False
         self._consumer_queue_count = 0
@@ -80,6 +78,7 @@ class Channel:
         # Need Refine
         channel.activate_consumer_queue = self.activate_consumer_queue
         channel.deactivate_consumer_queue = self.deactivate_consumer_queue
+        channel.publish_message = self.publish_message
         # end
         self._rabbit_channel = channel
         self.add_on_channel_close_callback()
@@ -133,7 +132,6 @@ class Channel:
         log.info("Published message # %i", self._message_number)
 
     def setup_exchanges(self):
-        log.info("bindings => %r", rabbit_registry.list_bindings())
         for b in self._bindings:
             exchange = b.exchange
             exchange.attach_channel(self._rabbit_channel)

@@ -1,6 +1,5 @@
-import functools
 import logging
-
+from pika import BasicProperties
 
 log = logging.getLogger(__name__)
 
@@ -9,7 +8,6 @@ def wrap_cb_with_ack(cb):
     def _f(channel, basic_deliver, properties, body):
 
         try:
-            print("============>", channel, basic_deliver, properties, body)
             ret = cb(body)
         except Exception as e:
             log.exception(e)
@@ -17,6 +15,36 @@ def wrap_cb_with_ack(cb):
         else:
             channel.basic_ack(delivery_tag=basic_deliver.delivery_tag)
         return ret
+
+    return _f
+
+
+def wrap_rpc_request_with_ack(cb):
+    def _f(channel, method, properties, body):
+        try:
+            ret = cb(body)
+
+            channel.basic_publish(
+                exchange="",
+                routing_key=properties.reply_to,
+                properties=BasicProperties(
+                    correlation_id=properties.correlation_id
+                ),
+                body=str(ret),
+            )
+        except Exception as e:
+            log.exception(e)
+            raise
+        else:
+            channel.basic_ack(delivery_tag=method.delivery_tag)
+
+    return _f
+
+
+def wrap_rpc_response(cb, corr_id):
+    def _f(channel, method, properties, body):
+        if corr_id == properties.correlation_id:
+            cb(body)
 
     return _f
 
@@ -34,6 +62,12 @@ class RabbitQueue:
 
     def register_on_message_callback(self, cb):
         self._on_message = wrap_cb_with_ack(cb)
+
+    def register_on_request_callback(self, cb):
+        self._on_message = wrap_rpc_request_with_ack(cb)
+
+    def register_on_response_callback(self, corr_id, cb):
+        self._on_message = wrap_rpc_response()
 
     def attach_channel(self, channel):
         self._channel = channel
