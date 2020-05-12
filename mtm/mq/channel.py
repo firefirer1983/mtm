@@ -1,3 +1,5 @@
+import uuid
+
 import pika
 import functools
 import logging
@@ -82,7 +84,7 @@ class Channel:
         # end
         self._rabbit_channel = channel
         self.add_on_channel_close_callback()
-        self.setup_exchanges()
+        self.setup_bindings()
 
     def add_on_channel_close_callback(self):
         log.info("Adding channel close callback")
@@ -131,14 +133,15 @@ class Channel:
         self._deliveries.append(self._message_number)
         log.info("Published message # %i", self._message_number)
 
-    def setup_exchanges(self):
+    def setup_bindings(self):
         for b in self._bindings:
             exchange = b.exchange
             exchange.attach_channel(self._rabbit_channel)
-            log.info("%s is producer:%u" % (str(b), b.is_producer))
+            log.info("%s is consumer:%u" % (str(b), b.is_consumer))
             if b.is_producer:
                 b.attach_channel(self._rabbit_channel)
-            if exchange.is_default_exchange:
+
+            if exchange.is_default:
                 exchange.setup_queue(b, None)
             else:
                 log.info("exchange_declare:%s" % str(exchange))

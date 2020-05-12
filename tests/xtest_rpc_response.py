@@ -15,9 +15,8 @@ channel.queue_declare(queue="rpc_set_id")
 
 
 def on_request(ch, method, props, body):
-    n = int(body)
 
-    response = "[%r]rpc set id ok!" % n
+    response = "[%r]rpc set id ok!" % body
 
     ch.basic_publish(
         exchange="",

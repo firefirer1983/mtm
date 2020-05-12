@@ -35,24 +35,25 @@ class Exchange:
         log.info(binding)
         queue = binding.queue
         queue.attach_channel(self._channel)
+        log.info(
+            "binding:%s need_binding:%u" % (binding, binding.need_binding)
+        )
 
-        # Attention!
-        # Don't bind queue to default exchange'
-        if binding.exchange.is_default_exchange:
-            cb = queue.setup_qos
-        elif binding.need_binding:
+        if binding.need_binding:
             cb = functools.partial(
                 queue.setup_binding, userdata=str(binding.exchange)
             )
+        elif binding.is_rpc and binding.is_consumer:
+            cb = queue.setup_qos
         else:
             cb = lambda x: x
         self._channel.queue_declare(
-            queue=str(queue), callback=cb, exclusive=queue.is_exclusive
+            queue=str(queue), callback=cb, exclusive=queue.exclusive
         )
 
     @property
-    def is_default_exchange(self):
-        return isinstance(self, DefaultExchange)
+    def is_default(self):
+        return self._exchange_type == "default"
 
 
 class TopicExchange(Exchange):
@@ -62,7 +63,7 @@ class TopicExchange(Exchange):
 
 class DefaultExchange(Exchange):
     def __init__(self):
-        super().__init__("", None)
+        super().__init__("", "default")
 
 
 default_exchange = DefaultExchange()

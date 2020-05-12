@@ -8,7 +8,7 @@ class RabbitContext(Context):
         self._consumers = set()
         self._producers = set()
         self._rpc_clients = set()
-    
+
     def add_consumer(self, consumer):
         self._consumers.add(consumer)
 
@@ -52,7 +52,7 @@ class RabbitContext(Context):
         return list(
             chain(
                 [c.binding for c in self._consumers],
-                [p.binding for p in self._producers],
+                [p.binding for p in self._producers if not p.binding.is_rpc],
             )
         )
 

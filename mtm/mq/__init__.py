@@ -1,11 +1,12 @@
 import abc
+import pika
 import json
 import logging
-import time
 import uuid
 
 from pika import BasicProperties
 
+from .connection import BlockingConnection
 from .rabbit_ctx import rabbit_context
 
 from .channel import Channel
@@ -33,6 +34,7 @@ class RabbitConsumer(MessageConsumer):
     def __init__(self, binding_key, queue, exchange):
         self._binding = ConsumerBinding(queue, exchange, binding_key)
         self._binding.queue.register_on_message_callback(self.on_message)
+        rabbit_context.add_consumer(self)
 
     @property
     def consumer_id(self):
@@ -53,6 +55,7 @@ class RabbitConsumer(MessageConsumer):
 class RabbitListener:
     def __init__(self, binding_key, queue, exchange):
         self._binding = ConsumerBinding(queue, exchange, binding_key)
+        rabbit_context.add_consumer(self)
 
     @property
     def consumer_id(self):
@@ -70,6 +73,7 @@ class RabbitRpcServer(RpcServer):
     def __init__(self, queue):
         self._binding = RpcServerBinding(queue, "default")
         self._binding.queue.register_on_request_callback(self.on_request)
+        rabbit_context.add_consumer(self)
 
     @property
     def consumer_id(self):
@@ -89,6 +93,7 @@ class RabbitRpcServer(RpcServer):
 class RabbitRpcListener:
     def __init__(self, queue):
         self._binding = RpcServerBinding(queue, "default")
+        rabbit_context.add_consumer(self)
 
     def __call__(self, cb):
         self._binding.queue.register_on_request_callback(cb)
@@ -98,50 +103,10 @@ class RabbitRpcListener:
         return self._binding
 
 
-class RabbitRpcClient(RpcClient):
-    def __init__(self, routing_key):
-        self._routing_key = routing_key
-        self._binding = RpcClientBinding("", "default")
-        self._rsp = None
-        self._corr_id = None
-
-    def call(self, msg):
-        self._rsp = None
-        self._corr_id = str(uuid.uuid4())
-        self._binding.queue.register_on_response_callback(
-            self._corr_id, self._on_response
-        )
-        self._binding.queue.channel.basic_consume()
-        properties = BasicProperties(
-            reply_to=str(self._binding.queue),
-            content_type="application/json",
-            correlation_id=self._corr_id,
-        )
-        self._binding.channel.publish_message(
-            exchange="",
-            routing_key=self._routing_key,
-            properties=properties,
-            body=msg,
-        )
-        while self._rsp is None:
-            time.sleep(0.1)
-        return self._rsp
-
-    @property
-    def producer_id(self):
-        return "%s:%s" % (self._binding.queue, self._routing_key)
-
-    def _on_response(self, body):
-        self._rsp = body
-
-    @property
-    def binding(self):
-        return self._binding
-
-
 class RabbitProducer(MessageProducer):
     def __init__(self, queue, exchange):
         self._binding = ProducerBinding(queue, exchange)
+        rabbit_context.add_producer(self)
 
     def publish_json(self, routing_key, message):
         properties = BasicProperties(
@@ -170,9 +135,53 @@ class RabbitProducer(MessageProducer):
         return "<RabbitProducer> with binding:%s" % self._binding
 
 
+class RabbitRpcClient(RpcClient):
+    def connect(self, url):
+        self._connection = BlockingConnection(url=url)
+        self._rabbit_channel = self._connection.channel
+        return self
+
+    def __init__(self, routing_key):
+        self._connection = None
+        self._routing_key = routing_key
+        self._rabbit_channel = None
+        self._callback_queue = None
+        self._corr_id = None
+        self._rsp = None
+
+    def _on_response(self, ch, method, props, body):
+        if self._corr_id == props.correlation_id:
+            self._rsp = body
+
+    def call(self, msg):
+        assert self._connection, "Connect Before Rpc Call!"
+        result = self._rabbit_channel.queue_declare(queue="", exclusive=True)
+        self._callback_queue = result.method.queue
+        self._corr_id = None
+        self._rabbit_channel.basic_consume(
+            queue=self._callback_queue,
+            on_message_callback=self._on_response,
+            auto_ack=True,
+        )
+        self._rsp = None
+        self._corr_id = str(uuid.uuid4())
+        self._rabbit_channel.basic_publish(
+            exchange="",
+            routing_key=str(self._routing_key),
+            properties=pika.BasicProperties(
+                reply_to=self._callback_queue, correlation_id=self._corr_id,
+            ),
+            body=str(msg),
+        )
+        while self._rsp is None:
+            self._connection.poll_event()
+        self._rabbit_channel.queue_delete(self._callback_queue)
+        return self._rsp
+
+
 class RabbitPoll(Poll):
     def __init__(self, url):
-        self._interval = 500
+        self._interval = 200
         self._channel = Channel(url)
 
     def get_interval(self):

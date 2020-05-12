@@ -50,17 +50,24 @@ def wrap_rpc_response(cb, corr_id):
 
 
 class RabbitQueue:
-    def __init__(self, queue_name, qos=1):
+    def __init__(
+        self,
+        queue_name,
+        qos=1,
+        exclusive=False,
+        auto_ack=False,
+        binding_key=None,
+    ):
         self._name = queue_name
         self._qos = qos
         self._channel = None
-        self._binding_key = None
+        self._binding_key = binding_key
         self.was_consuming = True
         self._consuming = False
         self._consumer_tag = None
         self._on_message = None
-        self._exclusive = False
-        self._auto_ack = False
+        self._exclusive = exclusive
+        self._auto_ack = auto_ack
 
     def register_on_message_callback(self, cb):
         self._on_message = wrap_cb_with_ack(cb)
@@ -98,22 +105,22 @@ class RabbitQueue:
         self.add_on_cancel_callback()
         print("%s: on_message:%r" % (self._name, self._on_message))
         self._consumer_tag = self._channel.basic_consume(
-            self._name, self._on_message, auto_ack=self.is_auto_ack
+            self._name, self._on_message, auto_ack=self.auto_ack
         )
         self.was_consuming = True
         self._consuming = True
 
         self._channel.activate_consumer_queue()
-    
+
     def start_consuming_rpc(self):
         log.info("Issuing consumer related RPC commands")
         print("%s: on_message:%r" % (self._name, self._on_message))
         self._consumer_tag = self._channel.basic_consume(
-            self._name, self._on_message, auto_ack=self.is_auto_ack
+            self._name, self._on_message, auto_ack=self.auto_ack
         )
         self.was_consuming = True
         self._consuming = True
-    
+
         self._channel.activate_consumer_queue()
 
     def add_on_cancel_callback(self):
@@ -141,18 +148,12 @@ class RabbitQueue:
         if self._channel.consumer_queue_count <= 0:
             self._channel.close_channel()
 
-    def set_exclusive(self):
-        self._exclusive = True
-
-    def set_auto_ack(self):
-        self._auto_ack = True
-
     @property
-    def is_exclusive(self):
+    def exclusive(self):
         return self._exclusive
 
     @property
-    def is_auto_ack(self):
+    def auto_ack(self):
         return self._auto_ack
 
     def set_queue_name(self, name):
@@ -171,7 +172,3 @@ class RabbitQueue:
     @property
     def binding_key(self):
         return self._binding_key
-
-    @binding_key.setter
-    def binding_key(self, val):
-        self._binding_key = val

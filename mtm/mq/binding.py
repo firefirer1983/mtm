@@ -1,5 +1,4 @@
 import abc
-from .rabbit_ctx import rabbit_context
 from .queue import RabbitQueue
 from .exchange import TopicExchange, default_exchange, DefaultExchange
 import logging
@@ -8,14 +7,10 @@ log = logging.getLogger(__name__)
 
 
 class Binding(abc.ABC):
-    def __init__(self, queue, exchange, binding_key=None):
-        self._queue = RabbitQueue(queue)
-        if exchange == "default":
-            self._exchange = default_exchange
-        else:
-            self._exchange = TopicExchange(exchange)
+    def __init__(self, queue, exchange):
+        self._queue = queue
+        self._exchange = exchange
         self._channel = None
-        self._queue.binding_key = binding_key
 
     @property
     def exchange(self):
@@ -55,11 +50,19 @@ class Binding(abc.ABC):
     def is_rpc(self):
         return False
 
+    @property
+    def is_producer(self):
+        return True
+
 
 class ConsumerMixin:
     @property
     def is_consumer(self):
         return True
+
+    @property
+    def is_producer(self):
+        return False
 
 
 class RpcMixin:
@@ -69,21 +72,44 @@ class RpcMixin:
 
 
 class ConsumerBinding(Binding, ConsumerMixin):
-    def __init__(self, queue, exchange, binding_key):
-        super().__init__(queue, exchange, binding_key)
-        rabbit_context.add_consumer(self)
+    def __init__(
+        self,
+        q_name,
+        ex_name,
+        binding_key=None,
+        exclusive=False,
+        auto_ack=False,
+    ):
+        super().__init__(
+            RabbitQueue(
+                q_name,
+                binding_key=binding_key,
+                exclusive=exclusive,
+                auto_ack=auto_ack,
+            ),
+            default_exchange
+            if ex_name == "default"
+            else TopicExchange(ex_name),
+        )
 
 
 class ProducerBinding(Binding):
-    def __init__(self, queue, exchange):
-        super().__init__(queue, exchange)
-        rabbit_context.add_producer(self)
+    def __init__(self, q_name, ex_name, exclusive=False, auto_ack=False):
+        super().__init__(
+            RabbitQueue(q_name, exclusive=exclusive, auto_ack=auto_ack),
+            default_exchange
+            if ex_name == "default"
+            else TopicExchange(ex_name),
+        )
 
 
+# RPC Client 的response consumer需要 auto ack
 class RpcClientBinding(ProducerBinding, RpcMixin):
-    pass
+    def __init__(self, q_name, ex_name):
+        super().__init__(q_name, ex_name, auto_ack=True)
 
 
+# RPC Server 的 request queue需要exclusive
 class RpcServerBinding(ConsumerBinding, RpcMixin):
-    def __init__(self, queue, exchange):
-        super().__init__(queue, exchange)
+    def __init__(self, q_name, ex_name):
+        super().__init__(q_name, ex_name, exclusive=True)
