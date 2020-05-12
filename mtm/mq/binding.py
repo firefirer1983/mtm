@@ -1,5 +1,5 @@
 import abc
-
+from .rabbit_ctx import rabbit_context
 from .queue import RabbitQueue
 from .exchange import TopicExchange, default_exchange, DefaultExchange
 import logging
@@ -71,10 +71,13 @@ class RpcMixin:
 class ConsumerBinding(Binding, ConsumerMixin):
     def __init__(self, queue, exchange, binding_key):
         super().__init__(queue, exchange, binding_key)
+        rabbit_context.add_consumer(self)
 
 
 class ProducerBinding(Binding):
-    pass
+    def __init__(self, queue, exchange):
+        super().__init__(queue, exchange)
+        rabbit_context.add_producer(self)
 
 
 class RpcClientBinding(ProducerBinding, RpcMixin):

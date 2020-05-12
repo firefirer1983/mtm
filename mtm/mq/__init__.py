@@ -33,7 +33,6 @@ class RabbitConsumer(MessageConsumer):
     def __init__(self, binding_key, queue, exchange):
         self._binding = ConsumerBinding(queue, exchange, binding_key)
         self._binding.queue.register_on_message_callback(self.on_message)
-        rabbit_context.add_consumer(self)
 
     @property
     def consumer_id(self):
@@ -54,7 +53,6 @@ class RabbitConsumer(MessageConsumer):
 class RabbitListener:
     def __init__(self, binding_key, queue, exchange):
         self._binding = ConsumerBinding(queue, exchange, binding_key)
-        rabbit_context.add_consumer(self)
 
     @property
     def consumer_id(self):
@@ -71,9 +69,7 @@ class RabbitListener:
 class RabbitRpcServer(RpcServer):
     def __init__(self, queue):
         self._binding = RpcServerBinding(queue, "default")
-        self._binding.set_binding_key(binding_key=str(self._binding.queue))
         self._binding.queue.register_on_request_callback(self.on_request)
-        rabbit_context.add_consumer(self)
 
     @property
     def consumer_id(self):
@@ -92,9 +88,7 @@ class RabbitRpcServer(RpcServer):
 
 class RabbitRpcListener:
     def __init__(self, queue):
-        self._binding = Binding(queue, "default")
-        self._binding.set_binding_key(binding_key=str(self._binding.queue))
-        rabbit_context.add_consumer(self)
+        self._binding = RpcServerBinding(queue, "default")
 
     def __call__(self, cb):
         self._binding.queue.register_on_request_callback(cb)
@@ -107,11 +101,9 @@ class RabbitRpcListener:
 class RabbitRpcClient(RpcClient):
     def __init__(self, routing_key):
         self._routing_key = routing_key
-        self._binding = Binding("", "default")
+        self._binding = RpcClientBinding("", "default")
         self._rsp = None
         self._corr_id = None
-
-        rabbit_context.add_rpc_client(self)
 
     def call(self, msg):
         self._rsp = None
@@ -149,8 +141,7 @@ class RabbitRpcClient(RpcClient):
 
 class RabbitProducer(MessageProducer):
     def __init__(self, queue, exchange):
-        self._binding = Binding(queue, exchange)
-        rabbit_context.add_producer(self)
+        self._binding = ProducerBinding(queue, exchange)
 
     def publish_json(self, routing_key, message):
         properties = BasicProperties(
