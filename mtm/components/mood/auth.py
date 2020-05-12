@@ -11,9 +11,6 @@ class LoginMethod:
     PASSWORD = "PASSWORD"
 
 
-import requests
-
-
 class BearerAuth(requests.auth.AuthBase):
     def __init__(self, token):
         self.token = token
@@ -33,8 +30,12 @@ class Auth:
         self._login = False
 
     @property
-    def bear(self):
+    def bearer(self):
         return self._bearer
+
+    @property
+    def token(self):
+        return self._token
 
     def login(self):
         path_ = "/user/login"
@@ -46,18 +47,13 @@ class Auth:
                 "loginType": LoginMethod.VERIFICATION_CODE,
             },
         )
-        ret = ret.json()
-        self._token = ret["token"]
+        body = ret.json()
+        self._token = body["token"]
         self._bearer = BearerAuth(self._token)
         self._login = bool(self._token)
+        return ret.status_code == 200
 
     def logout(self):
         path_ = "/user/logout"
-        ret = requests.post(url=host + path_, auth=self.bear)
-        ret = ret.json()
-        self._token = ret["token"]
-        self._login = bool(self._token)
-
-    @property
-    def token(self):
-        return self._token
+        ret = requests.post(url=host + path_, auth=self.bearer)
+        return ret.status_code == 200
