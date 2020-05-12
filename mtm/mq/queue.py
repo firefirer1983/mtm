@@ -4,7 +4,7 @@ from pika import BasicProperties
 log = logging.getLogger(__name__)
 
 
-def wrap_cb_with_ack(cb):
+def ack_context_wrapper(cb):
     def _f(channel, basic_deliver, properties, body):
 
         try:
@@ -19,7 +19,7 @@ def wrap_cb_with_ack(cb):
     return _f
 
 
-def wrap_rpc_request_with_ack(cb):
+def rpc_ack_context_wrapper(cb):
     def _f(channel, method, properties, body):
         try:
             ret = cb(body)
@@ -62,10 +62,10 @@ class RabbitQueue:
         self._auto_ack = auto_ack
 
     def register_on_message_callback(self, cb):
-        self._on_message = wrap_cb_with_ack(cb)
+        self._on_message = ack_context_wrapper(cb)
 
     def register_on_request_callback(self, cb):
-        self._on_message = wrap_rpc_request_with_ack(cb)
+        self._on_message = rpc_ack_context_wrapper(cb)
 
     def attach_channel(self, channel):
         self._channel = channel

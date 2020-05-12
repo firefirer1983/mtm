@@ -31,7 +31,8 @@ APP_ID = "mtm"
 class RabbitConsumer(MessageConsumer):
     def __init__(self, binding_key, queue, exchange):
         self._binding = ConsumerBinding(queue, exchange, binding_key)
-        self._binding.queue.register_on_message_callback(self.on_message)
+        if not queue.auto_ack:
+            self._binding.queue.register_on_message_callback(self.on_message)
         rabbit_context.add_consumer(self)
 
     @property
@@ -40,6 +41,9 @@ class RabbitConsumer(MessageConsumer):
 
     def __str__(self):
         return "<RabbitCustomer> with binding:%s" % self._binding
+
+    def ack_message(self, ack_tag):
+        self._binding.channel.basic_ack(ack_tag)
 
     @abc.abstractmethod
     def on_message(self, *args, body):

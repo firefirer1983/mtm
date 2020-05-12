@@ -6,6 +6,10 @@ class MessageConsumer(abc.ABC):
     def on_message(self, body):
         pass
 
+    @abc.abstractmethod
+    def ack_message(self, ack_tag):
+        pass
+
 
 class MessageProducer(abc.ABC):
     @abc.abstractmethod
