@@ -17,6 +17,7 @@ channel.queue_declare(queue="rpc_set_id")
 def on_request(ch, method, props, body):
 
     response = "[%r]rpc set id ok!" % body
+    print(response)
 
     ch.basic_publish(
         exchange="",
@@ -28,7 +29,9 @@ def on_request(ch, method, props, body):
 
 
 channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue="rpc_set_id", on_message_callback=on_request)
+channel.basic_consume(
+    queue="rpc_set_id", on_message_callback=on_request, exclusive=True
+)
 
 print(" [x] Awaiting RPC requests")
 channel.start_consuming()

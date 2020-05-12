@@ -20,7 +20,6 @@ from ..base.service import (
 from .binding import (
     ConsumerBinding,
     ProducerBinding,
-    RpcClientBinding,
     RpcServerBinding,
 )
 
@@ -155,6 +154,7 @@ class RabbitRpcClient(RpcClient):
 
     def call(self, msg):
         assert self._connection, "Connect Before Rpc Call!"
+        self._rabbit_channel.queue_declare(queue=self._routing_key)
         result = self._rabbit_channel.queue_declare(queue="", exclusive=True)
         self._callback_queue = result.method.queue
         self._corr_id = None

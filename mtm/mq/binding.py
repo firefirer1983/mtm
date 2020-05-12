@@ -1,6 +1,6 @@
 import abc
 from .queue import RabbitQueue
-from .exchange import TopicExchange, default_exchange, DefaultExchange
+from .exchange import TopicExchange, default_exchange
 import logging
 
 log = logging.getLogger(__name__)
@@ -44,34 +44,20 @@ class Binding(abc.ABC):
 
     @property
     def is_consumer(self):
-        return False
+        return isinstance(self, ConsumerBinding) or isinstance(
+            self, RpcServerBinding
+        )
 
     @property
     def is_rpc(self):
-        return False
+        return isinstance(self, RpcServerBinding)
 
     @property
     def is_producer(self):
-        return True
+        return isinstance(self, ProducerBinding)
 
 
-class ConsumerMixin:
-    @property
-    def is_consumer(self):
-        return True
-
-    @property
-    def is_producer(self):
-        return False
-
-
-class RpcMixin:
-    @property
-    def is_rpc(self):
-        return True
-
-
-class ConsumerBinding(Binding, ConsumerMixin):
+class ConsumerBinding(Binding):
     def __init__(
         self,
         q_name,
@@ -103,13 +89,7 @@ class ProducerBinding(Binding):
         )
 
 
-# RPC Client 的response consumer需要 auto ack
-class RpcClientBinding(ProducerBinding, RpcMixin):
-    def __init__(self, q_name, ex_name):
-        super().__init__(q_name, ex_name, auto_ack=True)
-
-
 # RPC Server 的 request queue需要exclusive
-class RpcServerBinding(ConsumerBinding, RpcMixin):
+class RpcServerBinding(ConsumerBinding):
     def __init__(self, q_name, ex_name):
         super().__init__(q_name, ex_name, exclusive=True)

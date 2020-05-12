@@ -36,7 +36,14 @@ class Exchange:
         queue = binding.queue
         queue.attach_channel(self._channel)
         log.info(
-            "binding:%s need_binding:%u" % (binding, binding.need_binding)
+            "binding:%s need_binding:%u is_consumer:%u is_producer:%u is_rpc:%u"
+            % (
+                binding,
+                binding.need_binding,
+                binding.is_consumer,
+                binding.is_producer,
+                binding.is_rpc,
+            )
         )
 
         if binding.need_binding:

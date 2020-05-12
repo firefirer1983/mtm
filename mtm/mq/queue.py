@@ -90,20 +90,20 @@ class RabbitQueue:
         )
 
     def setup_qos(self, _unused_frame):
+        log.info("setup qos done!")
         if not self._name:
             self._name = _unused_frame.method.queue
         self._channel.basic_qos(
             prefetch_count=self._qos, callback=self.start_consuming
         )
-
+        
     @property
     def consumer_tag(self):
         return self._consumer_tag
 
     def start_consuming(self, _unused_frame):
-        log.info("Issuing consumer related RPC commands")
+        log.info("Start Consuming!")
         self.add_on_cancel_callback()
-        print("%s: on_message:%r" % (self._name, self._on_message))
         self._consumer_tag = self._channel.basic_consume(
             self._name, self._on_message, auto_ack=self.auto_ack
         )
