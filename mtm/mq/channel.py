@@ -137,7 +137,6 @@ class Channel:
         for b in self._bindings:
             exchange = b.exchange
             exchange.attach_channel(self._rabbit_channel)
-            log.info("%s is consumer:%u" % (str(b), b.is_consumer))
             if b.is_producer:
                 b.attach_channel(self._rabbit_channel)
 

@@ -25,7 +25,6 @@ class Binding(abc.ABC):
         return bool(self._queue.binding_key)
 
     def attach_channel(self, ch):
-        log.info("%s attach channel" % str(self))
         self._channel = ch
 
     @property

@@ -1,5 +1,4 @@
 import abc
-import pika
 import json
 import logging
 import uuid
@@ -168,7 +167,7 @@ class RabbitRpcClient(RpcClient):
         self._rabbit_channel.basic_publish(
             exchange="",
             routing_key=str(self._routing_key),
-            properties=pika.BasicProperties(
+            properties=BasicProperties(
                 reply_to=self._callback_queue, correlation_id=self._corr_id,
             ),
             body=str(msg),

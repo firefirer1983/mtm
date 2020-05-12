@@ -41,14 +41,6 @@ def wrap_rpc_request_with_ack(cb):
     return _f
 
 
-def wrap_rpc_response(cb, corr_id):
-    def _f(channel, method, properties, body):
-        if corr_id == properties.correlation_id:
-            cb(body)
-
-    return _f
-
-
 class RabbitQueue:
     def __init__(
         self,
@@ -75,9 +67,6 @@ class RabbitQueue:
     def register_on_request_callback(self, cb):
         self._on_message = wrap_rpc_request_with_ack(cb)
 
-    def register_on_response_callback(self, corr_id, cb):
-        self._on_message = wrap_rpc_response(cb, corr_id)
-
     def attach_channel(self, channel):
         self._channel = channel
 
@@ -90,7 +79,6 @@ class RabbitQueue:
         )
 
     def setup_qos(self, _unused_frame):
-        log.info("setup qos done!")
         if not self._name:
             self._name = _unused_frame.method.queue
         self._channel.basic_qos(
@@ -104,17 +92,6 @@ class RabbitQueue:
     def start_consuming(self, _unused_frame):
         log.info("Start Consuming!")
         self.add_on_cancel_callback()
-        self._consumer_tag = self._channel.basic_consume(
-            self._name, self._on_message, auto_ack=self.auto_ack
-        )
-        self.was_consuming = True
-        self._consuming = True
-
-        self._channel.activate_consumer_queue()
-
-    def start_consuming_rpc(self):
-        log.info("Issuing consumer related RPC commands")
-        print("%s: on_message:%r" % (self._name, self._on_message))
         self._consumer_tag = self._channel.basic_consume(
             self._name, self._on_message, auto_ack=self.auto_ack
         )
