@@ -135,7 +135,8 @@ class Channel:
         for b in self._bindings:
             exchange = b.exchange
             exchange.attach_channel(self._rabbit_channel)
-            if not b.is_consumer:
+            log.info("%s is producer:%u" % (str(b), b.is_producer))
+            if b.is_producer:
                 b.attach_channel(self._rabbit_channel)
             if exchange.is_default_exchange:
                 exchange.setup_queue(b, None)

@@ -7,7 +7,8 @@ class RabbitContext(Context):
     def __init__(self):
         self._consumers = set()
         self._producers = set()
-
+        self._rpc_clients = set()
+    
     def add_consumer(self, consumer):
         self._consumers.add(consumer)
 

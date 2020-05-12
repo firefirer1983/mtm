@@ -36,7 +36,7 @@ class RpcClient:
         self._corr_id = str(uuid.uuid4())
         self.channel.basic_publish(
             exchange="",
-            routing_key="rcp_get_id",
+            routing_key="rpc_get_id",
             properties=pika.BasicProperties(
                 reply_to=self.callback_queue, correlation_id=self._corr_id,
             ),

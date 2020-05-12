@@ -40,12 +40,12 @@ class Exchange:
         # Don't bind queue to default exchange'
         if binding.exchange.is_default_exchange:
             cb = queue.setup_qos
-        elif binding.is_consumer:
+        elif binding.need_binding:
             cb = functools.partial(
                 queue.setup_binding, userdata=str(binding.exchange)
             )
         else:
-            cb = None
+            cb = lambda x: x
         self._channel.queue_declare(
             queue=str(queue), callback=cb, exclusive=queue.is_exclusive
         )

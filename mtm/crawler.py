@@ -1,7 +1,13 @@
 import json
 import logging
 from .components.downloader import Downloader
-from .mq import RabbitListener, RabbitProducer, RabbitPoll, RabbitRpcListener
+from .mq import (
+    RabbitListener,
+    RabbitProducer,
+    RabbitPoll,
+    RabbitRpcListener,
+    RabbitRpcClient,
+)
 from .model.models import Transmission, TxStatus
 from .model.database import scoped_session
 
@@ -71,10 +77,13 @@ def crawler_download_handler(msg):
     )
 
 
-@RabbitRpcListener(queue="rcp_get_id")
+@RabbitRpcListener(queue="rpc_get_id")
 def crawler_rpc_get_id_handler(msg):
     print(msg)
     return "crawler rpc server"
+
+
+rpc_client = RabbitRpcClient("rpc_set_id")
 
 
 class Crawler(RabbitPoll):
@@ -84,3 +93,4 @@ class Crawler(RabbitPoll):
 
     def poll(self):
         log.debug("Transaction status polling alive!")
+        rpc_client.call("set sid")

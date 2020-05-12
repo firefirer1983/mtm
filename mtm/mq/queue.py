@@ -83,6 +83,8 @@ class RabbitQueue:
         )
 
     def setup_qos(self, _unused_frame):
+        if not self._name:
+            self._name = _unused_frame.method.queue
         self._channel.basic_qos(
             prefetch_count=self._qos, callback=self.start_consuming
         )
@@ -94,12 +96,24 @@ class RabbitQueue:
     def start_consuming(self, _unused_frame):
         log.info("Issuing consumer related RPC commands")
         self.add_on_cancel_callback()
+        print("%s: on_message:%r" % (self._name, self._on_message))
         self._consumer_tag = self._channel.basic_consume(
             self._name, self._on_message, auto_ack=self.is_auto_ack
         )
         self.was_consuming = True
         self._consuming = True
 
+        self._channel.activate_consumer_queue()
+    
+    def start_consuming_rpc(self):
+        log.info("Issuing consumer related RPC commands")
+        print("%s: on_message:%r" % (self._name, self._on_message))
+        self._consumer_tag = self._channel.basic_consume(
+            self._name, self._on_message, auto_ack=self.is_auto_ack
+        )
+        self.was_consuming = True
+        self._consuming = True
+    
         self._channel.activate_consumer_queue()
 
     def add_on_cancel_callback(self):
@@ -140,6 +154,10 @@ class RabbitQueue:
     @property
     def is_auto_ack(self):
         return self._auto_ack
+
+    def set_queue_name(self, name):
+        log.info("set queue name:%s" % name)
+        self._name = str(name)
 
     def __str__(self):
         return str(self._name)

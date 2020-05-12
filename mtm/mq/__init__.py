@@ -16,7 +16,12 @@ from ..base.service import (
     RpcClient,
     RpcServer,
 )
-from .binding import Binding
+from .binding import (
+    ConsumerBinding,
+    ProducerBinding,
+    RpcClientBinding,
+    RpcServerBinding,
+)
 
 
 log = logging.getLogger(__file__)
@@ -26,8 +31,7 @@ APP_ID = "mtm"
 
 class RabbitConsumer(MessageConsumer):
     def __init__(self, binding_key, queue, exchange):
-        self._binding = Binding(queue, exchange)
-        self._binding.set_binding_key(binding_key)
+        self._binding = ConsumerBinding(queue, exchange, binding_key)
         self._binding.queue.register_on_message_callback(self.on_message)
         rabbit_context.add_consumer(self)
 
@@ -49,8 +53,7 @@ class RabbitConsumer(MessageConsumer):
 
 class RabbitListener:
     def __init__(self, binding_key, queue, exchange):
-        self._binding = Binding(queue, exchange)
-        self._binding.set_binding_key(binding_key)
+        self._binding = ConsumerBinding(queue, exchange, binding_key)
         rabbit_context.add_consumer(self)
 
     @property
@@ -67,7 +70,7 @@ class RabbitListener:
 
 class RabbitRpcServer(RpcServer):
     def __init__(self, queue):
-        self._binding = Binding(queue, "default")
+        self._binding = RpcServerBinding(queue, "default")
         self._binding.set_binding_key(binding_key=str(self._binding.queue))
         self._binding.queue.register_on_request_callback(self.on_request)
         rabbit_context.add_consumer(self)
@@ -102,15 +105,21 @@ class RabbitRpcListener:
 
 
 class RabbitRpcClient(RpcClient):
-    def __init__(self, routing_key, queue):
+    def __init__(self, routing_key):
         self._routing_key = routing_key
-        self._binding = Binding(queue, "default")
+        self._binding = Binding("", "default")
         self._rsp = None
         self._corr_id = None
+
+        rabbit_context.add_rpc_client(self)
 
     def call(self, msg):
         self._rsp = None
         self._corr_id = str(uuid.uuid4())
+        self._binding.queue.register_on_response_callback(
+            self._corr_id, self._on_response
+        )
+        self._binding.queue.channel.basic_consume()
         properties = BasicProperties(
             reply_to=str(self._binding.queue),
             content_type="application/json",
@@ -130,11 +139,12 @@ class RabbitRpcClient(RpcClient):
     def producer_id(self):
         return "%s:%s" % (self._binding.queue, self._routing_key)
 
-    def __call__(self):
-        self._binding.queue.register_on_response_callback(self._on_response)
-
     def _on_response(self, body):
         self._rsp = body
+
+    @property
+    def binding(self):
+        return self._binding
 
 
 class RabbitProducer(MessageProducer):
