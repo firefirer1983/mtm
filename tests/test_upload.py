@@ -3,8 +3,6 @@ import os
 
 cwd = os.path.dirname(__file__) + "/"
 
-print(cwd)
-
 
 def xtest_upload_img(channel):
     img = cwd + "/" + "test.jpg"
@@ -23,7 +21,9 @@ def xtest_upload_audio(channel):
 
 
 def test_release(channel):
-    with open(cwd + "youtube/NLJcwbpkiJ0/NLJcwbpkiJ0.info.json", "r") as f:
+    with open(
+        cwd + "youtube/NLJcwbpkiJ0/NLJcwbpkiJ0.info.json", "r", encoding="utf8"
+    ) as f:
         info = json.loads(f.read())
     assert info["duration"]
     assert info["title"]

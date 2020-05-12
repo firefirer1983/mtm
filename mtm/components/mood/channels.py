@@ -1,7 +1,10 @@
 import pdb
-
 import requests
-from mtm.components.mood import host
+from . import host
+from ...utils.emoji_filter import filter_emoji
+
+DESCRIPTION_MAX_LEN = 50
+SHOW_STYLE = "1"
 
 
 class MMChannel:
@@ -17,13 +20,17 @@ class MMChannel:
         return ret.json()
 
     def release_mm(self, info_meta, audio_meta, image_meta):
+        desc = filter_emoji(
+            str(info_meta["description"][:DESCRIPTION_MAX_LEN])
+        )
+        print(desc)
         release_note = {
-            "title": str(info_meta["title"]),
-            "cover": str(image_meta["url"]),
+            "title": info_meta["title"],
+            "cover": image_meta["url"],
             "duration": str(info_meta["duration"]),
-            "description": str(info_meta["description"]),
-            "downloadURL": str(audio_meta["url"]),
-            "showStyle": "1",
+            "description": desc,
+            "downloadURL": audio_meta["url"],
+            "showStyle": SHOW_STYLE,
         }
         path_ = "/show"
         ret = requests.post(
@@ -31,7 +38,7 @@ class MMChannel:
         )
         pdb.set_trace()
         assert ret.status_code == 200, "release mm fail"
-        return ret.json()
+        return True
 
     def upload_image(self, img):
         path_ = "/file/image/upload"
