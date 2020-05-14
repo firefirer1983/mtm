@@ -47,7 +47,6 @@ def crawler_action_handler(msg):
     info = None
     for i, res in enumerate(dwl):
         if i == DownloadState.validate:
-            print("crawler validate done!")
             result_publisher.publish_json(
                 routing_key="crawler.validate.result",
                 message={
@@ -56,10 +55,8 @@ def crawler_action_handler(msg):
                     "url": url,
                 },
             )
-            print("publish message done!")
             info = res
         elif i == DownloadState.download:
-            print("crawler download done!")
             result_publisher.publish_json(
                 routing_key="crawler.download.result",
                 message={
