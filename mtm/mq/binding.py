@@ -80,9 +80,16 @@ class ConsumerBinding(Binding):
 
 
 class ProducerBinding(Binding):
-    def __init__(self, q_name, ex_name, exclusive=False, auto_ack=False):
+    def __init__(
+        self, binding_key, q_name, ex_name, exclusive=False, auto_ack=False
+    ):
         super().__init__(
-            RabbitQueue(q_name, exclusive=exclusive, auto_ack=auto_ack),
+            RabbitQueue(
+                q_name,
+                binding_key=binding_key,
+                exclusive=exclusive,
+                auto_ack=auto_ack,
+            ),
             default_exchange
             if ex_name == "default"
             else TopicExchange(ex_name),

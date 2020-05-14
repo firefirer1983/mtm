@@ -20,7 +20,12 @@ def main():
     )
     ch = connection.channel()
     ch.exchange_declare(exchange="worker.mm", exchange_type="topic")
-    # ch.queue_declare(queue="crawler_action_request_q")
+    ch.queue_declare(queue="crawler_action_request_q")
+    ch.queue_bind(
+        queue="crawler_action_request_q",
+        exchange="worker.mm",
+        routing_key="crawler.*.request",
+    )
     ch.basic_publish(
         exchange="worker.mm",
         routing_key="crawler.download.request",
@@ -29,10 +34,11 @@ def main():
             {
                 "url": "https://www.youtube.com/watch?v=NLJcwbpkiJ0",
                 "username": "naeidzwwwwzlzzzz",
-            },
+            }
         ),
     )
-
+    print("published download request=======================>")
+    
     ch.queue_declare(queue="worker_action_result_q")
     ch.queue_bind(
         "worker_action_result_q", "worker.mm", routing_key="*.*.result"

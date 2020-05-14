@@ -16,11 +16,7 @@ from ..base.service import (
     RpcClient,
     RpcServer,
 )
-from .binding import (
-    ConsumerBinding,
-    ProducerBinding,
-    RpcServerBinding,
-)
+from .binding import ConsumerBinding, ProducerBinding, RpcServerBinding
 
 
 log = logging.getLogger(__file__)
@@ -106,8 +102,8 @@ class RabbitRpcListener:
 
 
 class RabbitProducer(MessageProducer):
-    def __init__(self, queue, exchange):
-        self._binding = ProducerBinding(queue, exchange)
+    def __init__(self, binding_key, queue, exchange):
+        self._binding = ProducerBinding(binding_key, queue, exchange)
         rabbit_context.add_producer(self)
 
     def publish_json(self, routing_key, message):
@@ -172,7 +168,7 @@ class RabbitRpcClient(RpcClient):
             exchange="",
             routing_key=str(self._routing_key),
             properties=BasicProperties(
-                reply_to=self._callback_queue, correlation_id=self._corr_id,
+                reply_to=self._callback_queue, correlation_id=self._corr_id
             ),
             body=str(msg),
         )

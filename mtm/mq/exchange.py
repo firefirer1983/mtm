@@ -48,7 +48,7 @@ class Exchange:
 
         if binding.need_binding:
             cb = functools.partial(
-                queue.setup_binding, userdata=str(binding.exchange)
+                queue.setup_binding, userdata=binding
             )
         elif binding.is_rpc and binding.is_consumer:
             cb = queue.setup_qos

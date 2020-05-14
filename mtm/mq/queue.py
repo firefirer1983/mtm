@@ -71,16 +71,20 @@ class RabbitQueue:
         self._channel = channel
 
     def setup_binding(self, _unused_frame, userdata):
-        self._name = _unused_frame.method.queue
+        binding = userdata
         log.info(
             "queue:%s bind with binding_key:%s"
             % (self._name, self.binding_key)
         )
+        if binding.is_producer:
+            cb = lambda x: x
+        else:
+            cb = self.setup_qos
         self._channel.queue_bind(
             self._name,
-            userdata,
+            str(binding.exchange),
             routing_key=self.binding_key,
-            callback=self.setup_qos,
+            callback=cb,
         )
 
     def setup_qos(self, _unused_frame):
