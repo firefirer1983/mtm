@@ -1,5 +1,6 @@
 import json
 import os
+import pprint
 
 from mtm.components.info_conv import info_convert
 from ..utils.stdout_ctx import redirect_to_buffer
@@ -22,19 +23,22 @@ def my_hook(d):
         print("Done downloading, now converting ...")
 
 
-root_dir = os.path.dirname(os.path.dirname(__file__))
-cache_dir = os.environ.get("cache_dir", "tests/")
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+cache_dir = os.environ.get("cache_dir", "tests")
 DEFAULT_AUDIO_FMT = "mp3"
 
 
 class Downloader:
-    def __init__(self, *urls, cache_path=root_dir + cache_dir):
+    def __init__(self, *urls, cache_path=None):
         self._opts = None
         self._parser = None
         self._curr_fulltitle = ""
         self._curr_vid = ""
         self._urls = urls
-        self._cache_path = cache_path
+        self._cache_path = (
+            cache_path if cache_path else "/".join([root_dir, cache_dir])
+        )
+        print("cache_path:", self._cache_path, "cache_dir:", cache_dir)
         self._info = None
         self._curr_extractor = None
 
@@ -64,7 +68,8 @@ class Downloader:
             info = buff.getvalue()
         info = info_convert(json.loads(info)) if info else None
         if info:
-            self._curr_fulltitle = info["fulltitle"]
+            print(pprint.pformat(info))
+            self._curr_fulltitle = info["fulltitle"].strip()
             self._curr_vid = info["id"]
             self._curr_extractor = info["extractor"]
             info["cache_path"] = self._cache_path
@@ -72,21 +77,23 @@ class Downloader:
         return info
 
     def download(self, *urls):
+        download_to = "/".join(
+            [
+                self._cache_path,
+                self._curr_extractor,
+                "%(fulltitle)s/%(id)s.%(ext)s",
+            ]
+        )
+        print("download path:", download_to)
         ydl_opts = {
             "proxy": "socks5://127.0.0.1:17720",
             # "logger": MyLogger(),
             "progress_hooks": [my_hook],
-            "quiet": True,
+            "quiet": False,
             "no_warnings": True,
             "format": "bestaudio/best",
             "writethumbnail": True,
-            "outtmpl": "/".join(
-                [
-                    self._cache_path,
-                    self._curr_extractor,
-                    "%(fulltitle)s/%(id)s.%(ext)s",
-                ]
-            ),
+            "outtmpl": download_to,
             "writeinfojson": True,
             "postprocessors": [
                 {

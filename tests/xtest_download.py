@@ -19,21 +19,31 @@ def main():
         delivery_mode=2,
     )
     ch = connection.channel()
-    ex = ch.exchange_declare(exchange="worker.mm", exchange_type="topic")
+    ch.exchange_declare(exchange="worker.mm", exchange_type="topic")
+    # ch.queue_declare(queue="crawler_action_request_q")
     ch.basic_publish(
         exchange="worker.mm",
-        routing_key="crawler.download",
+        routing_key="crawler.download.request",
         properties=props,
         body=json.dumps(
             {
-                "url": "https://www.youtube.com/watch?v=PJ1QwhNL72A",
+                "url": "https://www.youtube.com/watch?v=NLJcwbpkiJ0",
                 "username": "naeidzwwwwzlzzzz",
             },
         ),
     )
 
-    q = ch.queue_declare(queue="worker_action_result_q")
-    ch.queue_bind(q, ex, routing_key="*.*.result", callback=print_msg)
+    ch.queue_declare(queue="worker_action_result_q")
+    ch.queue_bind(
+        "worker_action_result_q", "worker.mm", routing_key="*.*.result"
+    )
+    ch.basic_consume(
+        "worker_action_result_q",
+        auto_ack=True,
+        on_message_callback=print_msg,
+        consumer_tag="xtesting",
+    )
+    ch.start_consuming()
 
 
 LOG_FORMAT = (

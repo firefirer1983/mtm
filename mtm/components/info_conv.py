@@ -14,6 +14,7 @@ extract_spec = {
     "id": str,
     "filesize": int,
     "uploader": str,
+    "extractor": str,
     "tags": list,
 }
 

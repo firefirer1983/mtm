@@ -71,6 +71,11 @@ class RabbitQueue:
         self._channel = channel
 
     def setup_binding(self, _unused_frame, userdata):
+        self._name = _unused_frame.method.queue
+        log.info(
+            "queue:%s bind with binding_key:%s"
+            % (self._name, self.binding_key)
+        )
         self._channel.queue_bind(
             self._name,
             userdata,
@@ -84,13 +89,13 @@ class RabbitQueue:
         self._channel.basic_qos(
             prefetch_count=self._qos, callback=self.start_consuming
         )
-        
+
     @property
     def consumer_tag(self):
         return self._consumer_tag
 
     def start_consuming(self, _unused_frame):
-        log.info("Start Consuming!")
+        log.info("Start Consuming with auto_ack:%r!" % self.auto_ack)
         self.add_on_cancel_callback()
         self._consumer_tag = self._channel.basic_consume(
             self._name, self._on_message, auto_ack=self.auto_ack

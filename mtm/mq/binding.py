@@ -32,10 +32,11 @@ class Binding(abc.ABC):
         return self._channel
 
     def __str__(self):
-        return "<Binding(%s)> %s:%s" % (
+        return "<Binding(%s)> %s:%s(%s)" % (
             self.__class__.__qualname__.lower(),
             self.exchange,
             self.queue,
+            self.queue.binding_key,
         )
 
     def __repr__(self):

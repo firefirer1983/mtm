@@ -18,7 +18,7 @@ result_publisher = RabbitProducer(
 
 
 @RabbitListener(
-    binding_key="splitter.split",
+    binding_key="splitter.split.request",
     queue="worker_action_request_q",
     exchange="worker.mm",
 )

@@ -15,9 +15,9 @@ from .model.database import scoped_session
 log = logging.getLogger(__file__)
 
 
-result_publisher = RabbitProducer(
-    queue="worker_action_result_q", exchange="worker.mm"
-)
+# result_publisher = RabbitProducer(
+#     queue="worker_action_result_q", exchange="worker.mm"
+# )
 
 DEFAULT_DURATION = 15 * 60  # 15 minutes maximum length
 
@@ -28,8 +28,8 @@ class DownloadState:
 
 
 @RabbitListener(
-    binding_key="crawler.*",
-    queue="worker_action_request_q",
+    binding_key="crawler.*.request",
+    queue="",
     exchange="worker.mm",
 )
 def crawler_action_handler(msg):
@@ -39,37 +39,40 @@ def crawler_action_handler(msg):
     info = None
     for i, res in enumerate(dwl):
         if i == DownloadState.validate:
-            result_publisher.publish_json(
-                routing_key="crawler.validate.result",
-                message={
-                    "validate": bool(res),
-                    "message": "Valid URL" if bool(res) else "Invalid URL",
-                    "url": url,
-                },
-            )
+            print("crawler validate done!")
+            # result_publisher.publish_json(
+            #     routing_key="crawler.validate.result",
+            #     message={
+            #         "validate": bool(res),
+            #         "message": "Valid URL" if bool(res) else "Invalid URL",
+            #         "url": url,
+            #     },
+            # )
+            print("publish message done!")
             info = res
         elif i == DownloadState.download:
-            result_publisher.publish_json(
-                routing_key="crawler.download.result",
-                message={
-                    "download": not bool(res),
-                    "message": "Download Fail:%s" % res
-                    if bool(res)
-                    else "Download Finished",
-                    "url": url,
-                },
-            )
-            if info["duration"] > DEFAULT_DURATION:
-                result_publisher.publish_json(
-                    "splitter.split",
-                    {
-                        "duration": DEFAULT_DURATION,
-                        "fulltitle": info["fulltitle"],
-                        "cache_path": info["cache_path"],
-                        "ext": DEFAULT_AUDIO_FMT,
-                        "id": info["id"],
-                    },
-                )
+            print("crawler download done!")
+            # result_publisher.publish_json(
+            #     routing_key="crawler.download.result",
+            #     message={
+            #         "download": not bool(res),
+            #         "message": "Download Fail:%s" % res
+            #         if bool(res)
+            #         else "Download Finished",
+            #         "url": url,
+            #     },
+            # )
+            # if info["duration"] > DEFAULT_DURATION:
+            #     result_publisher.publish_json(
+            #         "splitter.split",
+            #         {
+            #             "duration": DEFAULT_DURATION,
+            #             "fulltitle": info["fulltitle"],
+            #             "cache_path": info["cache_path"],
+            #             "ext": DEFAULT_AUDIO_FMT,
+            #             "id": info["id"],
+            #         },
+            #     )
 
 
 @RabbitRpcListener(queue="rpc_get_id")
