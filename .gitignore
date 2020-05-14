@@ -130,4 +130,6 @@ dmypy.json
 .idea
 *.json
 tests/youtube
+tests/out
+*.mp3
 *.jpg

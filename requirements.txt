@@ -3,4 +3,5 @@ pytest
 requests
 sqlalchemy
 youtube_dl
+ffmpeg-python
 faker

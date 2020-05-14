@@ -13,6 +13,12 @@ from sqlalchemy import (
 )
 
 
+class MediaLocation:
+    origin = "origin"
+    cache = "cache"
+    repo = "repo"
+
+
 class TxStatus:
     validating = "validating"
     valid = "valid"
@@ -23,6 +29,33 @@ class TxStatus:
     uploading = "uploading"
     uploaded = "uploaded"
     upload_fail = "upload_fail"
+    releasing = "releasing"
+    released = "released"
+    release_fail = "release_fail"
+
+
+class MultiMedia(MyBase, TimestampMixin):
+    __tablename__ = "multimedia"
+    mtype = Column(String(16), nullable=False)
+    origin = Column(String(256), nullable=False)
+    title = Column(String(64), nullable=False)
+    cached_at = Column(String(64))
+    url = Column(String(256))
+    key = Column(String(16))
+    present = Column(String(16))
+
+    @classmethod
+    def is_cached(cls, origin):
+        with scoped_session(auto_commit=False) as ssn:
+            return bool(
+                ssn.query.filter_by(
+                    origin=origin, present=MediaLocation.origin
+                )
+            )
+
+    @classmethod
+    def get_media_by_origin(cls, origin, ssn):
+        return ssn.query(cls).filter_by(origin=origin).first()
 
 
 class User(MyBase, TimestampMixin):
@@ -58,60 +91,32 @@ class User(MyBase, TimestampMixin):
 class Transmission(MyBase, TimestampMixin):
 
     __tablename__ = "transmission"
-    url = Column(String(256), nullable=False, unique=True)
     user_id = Column(Integer, ForeignKey("user.id"))
-    origin = Column(String(32), nullable=False)
-    vid = Column(String(256))
-    status = Column(String(16), nullable=False, default=TxStatus.validating)
+    mm_id = Column(Integer, ForeignKey("multimedia.id"))
+    status = Column(String(16), nullable=False)
 
     user = relationship("User")
+    multimedia = relationship("MultiMedia")
 
     def save(self, ssn):
         ssn.add(self)
 
     @classmethod
-    def is_transmission_exist(cls, url):
+    def is_transmission_exist(cls, multimedia, status):
         with scoped_session(auto_commit=False) as ssn:
-            return bool(ssn.query(cls).filter_by(url=url).one_or_none())
+            return bool(
+                ssn.query(cls)
+                .filter_by(mm_id=multimedia, status=status)
+                .one_or_none()
+            )
 
     @classmethod
-    def get_transmission(cls, ssn, url):
-        return ssn.query(cls).filter_by(url=url).one()
+    def get_transmission(cls, ssn, multimedia, status):
+        return ssn.query(cls).filter_by(mm_id=multimedia, status=status).one()
 
     @classmethod
     def get_transmission_by_id(cls, ssn, tx_id):
         return ssn.query(cls).filter_by(id=tx_id).one()
-
-    @property
-    def is_valid(self):
-        return not (
-            self.status == TxStatus.validating
-            or self.status == TxStatus.invalid
-        )
-
-    @property
-    def is_downloaded(self):
-        return self.status == TxStatus.downloaded
-
-    @property
-    def is_downloading(self):
-        return self.status == TxStatus.downloading
-
-    @property
-    def is_download_fail(self):
-        return self.status == TxStatus.download_fail
-
-    @property
-    def is_finished(self):
-        return self.status == TxStatus.uploaded
-
-    @property
-    def is_uploading(self):
-        return self.status == TxStatus.uploading
-
-    @property
-    def is_upload_fail(self):
-        return self.status == TxStatus.upload_fail
 
 
 def create_all_tables():

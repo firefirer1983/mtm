@@ -4,7 +4,8 @@ from os import path
 
 sys.path.append(path.join(path.dirname(__file__), ".."))
 
+url = "https://www.youtube.com/watch?v=NLJcwbpkiJ0"
+
 if __name__ == "__main__":
     dlw = Downloader()
-    dlw.validate_url("https://www.youtube.com/watch?v=NLJcwbpkiJ0")
-    dlw.download("https://www.youtube.com/watch?v=NLJcwbpkiJ0")
+    dlw.test_validate(url)

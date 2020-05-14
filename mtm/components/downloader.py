@@ -3,6 +3,8 @@ import json
 import os
 import random
 import sys
+
+from mtm.components.info_conv import info_convert
 from ..utils.stdout_ctx import redirect_to_buffer
 from youtube_dl.YoutubeDL import YoutubeDL
 from youtube_dl.options import parseOpts
@@ -12,7 +14,7 @@ from youtube_dl.compat import (
     workaround_optparse_bug9161,
 )
 from ..config import validate_conf, download_conf
-
+import youtube_dl
 from youtube_dl.utils import (
     DateRange,
     decodeOption,
@@ -35,12 +37,44 @@ from youtube_dl.extractor import gen_extractors, list_extractors
 from youtube_dl.extractor.adobepass import MSO_INFO
 
 
+class MyLogger(object):
+    def debug(self, msg):
+        pass
+
+    def warning(self, msg):
+        pass
+
+    def error(self, msg):
+        print(msg)
+
+
+def my_hook(d):
+    if d["status"] == "finished":
+        print("Done downloading, now converting ...")
+
+
 class Downloader:
     def __init__(self):
         self._opts = None
         self._parser = None
         self._all_urls = None
         self._ydl_opts = None
+
+    def test_validate(self, *urls):
+        self._ydl_opts = {
+            "proxy": "socks5://127.0.0.1:17720",
+            "dump_single_json": True,
+            "logger": MyLogger(),
+            "progress_hooks": [my_hook],
+            'format': 'bestaudio/best',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+        }
+        with youtube_dl.YoutubeDL(self._ydl_opts) as ydl:
+            print(ydl.download(urls))
 
     def _setup(self, *argv):
         self._opts = None
@@ -609,7 +643,12 @@ class Downloader:
                 print(e)
                 raise
             else:
-                return b.getvalue()
+                info = b.getvalue()
+                if info:
+                    info = info_convert(json.loads(info))
+                else:
+                    info = None
+                return info
 
     def download(self, url):
         try:
