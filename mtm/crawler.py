@@ -1,6 +1,6 @@
 import json
 import logging
-from .components.downloader import Downloader
+from .components.downloader import Downloader, DEFAULT_AUDIO_FMT
 from .mq import (
     RabbitListener,
     RabbitProducer,
@@ -15,66 +15,61 @@ from .model.database import scoped_session
 log = logging.getLogger(__file__)
 
 
-status_publisher = RabbitProducer(
-    queue="crawling_activity_status_q", exchange="worker.mm"
+result_publisher = RabbitProducer(
+    queue="worker_action_result_q", exchange="worker.mm"
 )
+
+DEFAULT_DURATION = 15 * 60  # 15 minutes maximum length
+
+
+class DownloadState:
+    validate = 0
+    download = 1
 
 
 @RabbitListener(
-    binding_key="crawler.validate",
-    queue="crawler_action_validate_q",
+    binding_key="crawler.*",
+    queue="worker_action_request_q",
     exchange="worker.mm",
 )
-def crawler_validate_handler(msg):
+def crawler_action_handler(msg):
     log.info("%r" % msg)
     url = json.loads(msg)["url"]
-
-    valid = False
-    with scoped_session() as s:
-        tx = Transmission.get_transmission(ssn=s, url=url)
-        dwl = Downloader()
-        res = dwl.validate_url(tx.url)
-        if res:
-            tx.status = TxStatus.valid
-            valid = True
-        else:
-            tx.status = TxStatus.invalid
-
-    status_publisher.publish_json(
-        routing_key="crawling.validate.status",
-        message={"valid": valid, "url": url},
-    )
-
-
-@RabbitListener(
-    binding_key="crawler.download",
-    queue="crawler_action_download_q",
-    exchange="worker.mm",
-)
-def crawler_download_handler(msg):
-    log.info("%r" % msg)
-    url = json.loads(msg)["url"]
-
-    with scoped_session() as ssn:
-        tx = Transmission.get_transmission(ssn, url)
-        try:
-            dwl = Downloader()
-            tx.status = TxStatus.downloading
-            dwl.download(tx.url)
-        except Exception as e:
-            tx.status = TxStatus.download_fail
-            downloaded = False
-            message = "Download Fail"
-            log.exception(e)
-        else:
-            tx.status = TxStatus.downloaded
-            downloaded = True
-            message = "Download Finished"
-
-    status_publisher.publish_json(
-        routing_key="crawling.download.status",
-        message={"download": downloaded, "message": message, "url": url},
-    )
+    dwl = Downloader(url)
+    info = None
+    for i, res in enumerate(dwl):
+        if i == DownloadState.validate:
+            result_publisher.publish_json(
+                routing_key="crawler.validate.result",
+                message={
+                    "validate": bool(res),
+                    "message": "Valid URL" if bool(res) else "Invalid URL",
+                    "url": url,
+                },
+            )
+            info = res
+        elif i == DownloadState.download:
+            result_publisher.publish_json(
+                routing_key="crawler.download.result",
+                message={
+                    "download": not bool(res),
+                    "message": "Download Fail:%s" % res
+                    if bool(res)
+                    else "Download Finished",
+                    "url": url,
+                },
+            )
+            if info["duration"] > DEFAULT_DURATION:
+                result_publisher.publish_json(
+                    "splitter.split",
+                    {
+                        "duration": DEFAULT_DURATION,
+                        "fulltitle": info["fulltitle"],
+                        "cache_path": info["cache_path"],
+                        "ext": DEFAULT_AUDIO_FMT,
+                        "id": info["id"],
+                    },
+                )
 
 
 @RabbitRpcListener(queue="rpc_get_id")

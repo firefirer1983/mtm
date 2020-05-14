@@ -5,40 +5,31 @@ from .mq import RabbitListener, RabbitProducer, RabbitPoll
 log = logging.getLogger(__file__)
 
 
-search_status_publisher = RabbitProducer(
-    "transporting_search_status_q", "worker.mm"
-)
-upload_status_publisher = RabbitProducer(
-    "transporting_upload_status_q", "worker.mm"
-)
+result_publisher = RabbitProducer("worker_action_result_q", "worker.mm")
 
 
 @RabbitListener(
-    binding_key="transporter.search",
-    queue="transporter_search_q",
+    binding_key="transporter.*",
+    queue="worker_action_request_q",
     exchange="worker.mm",
 )
-def transporter_search_handler(msg):
+def transporter_action_handler(msg):
     log.info("%r" % msg)
     url = json.loads(msg)["url"]
-    search_status_publisher.publish_json(
-        routing_key="transporting.search.status",
-        message={"search": "not found", "url": url},
-    )
+    if msg["action.name"] == "search":
 
-
-@RabbitListener(
-    binding_key="transporter.upload",
-    queue="transporter_upload_q",
-    exchange="worker.mm",
-)
-def transporter_upload_handler(msg):
-    log.info("%r" % msg)
-    url = json.loads(msg)["url"]
-    upload_status_publisher.publish_json(
-        routing_key="transporting.upload.status",
-        message={"upload": "finished", "url": url},
-    )
+        result_publisher.publish_json(
+            routing_key="transporter.search.result",
+            message={"search": True, "url": url, "message": "Search Found!"},
+        )
+    elif msg["action.name"] == "upload":
+        url = json.loads(msg)["url"]
+        result_publisher.publish_json(
+            routing_key="transporter.upload.result",
+            message={"upload": True, "url": url, "message": "Upload Finished"},
+        )
+    else:
+        log.error("Unknown msg:%r" % msg)
 
 
 class Transporter(RabbitPoll):

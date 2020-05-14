@@ -4,6 +4,11 @@ from pika.connection import URLParameters
 import json
 
 
+def print_msg(ch, method, props, body):
+    print(body)
+    ch.basic_ack(method.delivery_tag)
+
+
 def main():
     connection = BlockingConnection(
         parameters=URLParameters("amqp://guest:guest@localhost:5672/%2F")
@@ -14,10 +19,10 @@ def main():
         delivery_mode=2,
     )
     ch = connection.channel()
-    ch.exchange_declare(exchange="worker.mm", exchange_type="topic")
+    ex = ch.exchange_declare(exchange="worker.mm", exchange_type="topic")
     ch.basic_publish(
         exchange="worker.mm",
-        routing_key="request.download",
+        routing_key="crawler.download",
         properties=props,
         body=json.dumps(
             {
@@ -26,6 +31,9 @@ def main():
             },
         ),
     )
+
+    q = ch.queue_declare(queue="worker_action_result_q")
+    ch.queue_bind(q, ex, routing_key="*.*.result", callback=print_msg)
 
 
 LOG_FORMAT = (

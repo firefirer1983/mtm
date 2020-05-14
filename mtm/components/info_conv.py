@@ -26,16 +26,18 @@ def info_convert(info):
         except KeyError as e:
             log.exception(e)
             log.warning("No such info key:%s in json" % k)
-            ret[k] = None
+            ret[k] = ""
             continue
+
         if fmt is str:
-            ret[k] = filter_emoji(v)
+            ret[k] = filter_emoji(v) if v else ""
         elif fmt is int:
-            ret[k] = int(v)
+            ret[k] = int(v) if v else 0
         elif fmt is list:
             arr = list()
-            for p in v:
-                arr.append(filter_emoji(p))
+            if v:
+                for p in v:
+                    arr.append(filter_emoji(p))
             ret[k] = arr
 
     return ret

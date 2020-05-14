@@ -7,5 +7,10 @@ sys.path.append(path.join(path.dirname(__file__), ".."))
 url = "https://www.youtube.com/watch?v=NLJcwbpkiJ0"
 
 if __name__ == "__main__":
-    dlw = Downloader()
-    dlw.test_validate(url)
+    dlw = Downloader(url)
+    ret = None
+    for i, res in enumerate(dlw):
+        if i == 0:
+            print("validate:", res)
+        else:
+            print("download:", res)
