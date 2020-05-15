@@ -1,11 +1,12 @@
 import logging
-from ..utils.emoji_filter import filter_emoji
+from mtm.utils.string_fmt import filter_emoji
 
 log = logging.getLogger(__file__)
 
 
 extract_spec = {
     "_filename": str,
+    "dirname": str,
     "title": str,
     "fulltitle": str,
     "categories": list,

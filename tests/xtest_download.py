@@ -26,26 +26,30 @@ def main():
         exchange="worker.mm",
         routing_key="crawler.*.request",
     )
-    ch.basic_publish(
-        exchange="worker.mm",
-        routing_key="crawler.download.request",
-        properties=props,
-        body=json.dumps(
-            {
-                "url": "https://www.youtube.com/watch?v=NLJcwbpkiJ0",
-                "username": "naeidzwwwwzlzzzz",
-            }
-        ),
-    )
-    print("published download request=======================>")
-    
+    url_list = [
+        "https://www.youtube.com/watch?v=PJ1QwhNL72A",
+        "https://www.youtube.com/watch?v=b5K192_hilA",
+        "https://www.youtube.com/watch?v=L0skErRNc5Y",
+        "https://www.youtube.com/watch?v=G8GWtGZuHSk",
+        "https://www.youtube.com/watch?v=Vn4wxZlaFYc",
+        "https://www.youtube.com/watch?v=ObO6XEQSWak",
+        "https://www.youtube.com/watch?v=fPz2tZibAAQ",
+        "https://www.youtube.com/watch?v=v0ADJy2Menk",
+    ]
+    for url in url_list:
+        ch.basic_publish(
+            exchange="worker.mm",
+            routing_key="crawler.download.request",
+            properties=props,
+            body=json.dumps({"url": url, "username": "naeidzwwwwzlzzzz",}),
+        )
+
     ch.queue_declare(queue="worker_action_result_q")
     ch.queue_bind(
         "worker_action_result_q", "worker.mm", routing_key="*.*.result"
     )
     ch.basic_consume(
         "worker_action_result_q",
-        auto_ack=True,
         on_message_callback=print_msg,
         consumer_tag="xtesting",
     )

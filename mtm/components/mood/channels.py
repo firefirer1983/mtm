@@ -1,7 +1,7 @@
 import pdb
 import requests
 from . import host
-from ...utils.emoji_filter import filter_emoji
+from mtm.utils.string_fmt import filter_emoji
 
 DESCRIPTION_MAX_LEN = 50
 SHOW_STYLE = "1"

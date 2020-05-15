@@ -22,13 +22,16 @@ result_publisher = RabbitProducer(
 )
 def splitter_action_handler(msg):
     log.info("%r" % msg)
-    cache_dir = json.loads(msg)["cache_path"]
+    cache_path = json.loads(msg)["cache_path"]
     vid = json.loads(msg)["id"]
-    fulltitle = json.loads(msg)["fulltitle"]
     duration = json.loads(msg)["duration"]
+    extractor = json.loads(msg).get("extractor", "youtube")
     ext = json.loads(msg)["ext"]
-    to_split = cache_dir + "/" + vid + "." + ext
-    split_pattern = cache_dir + "/" + vid + ".{:04d}" + "." + ext
+    dirname = json.loads(msg)["dirname"]
+    common_name = "/".join([cache_path, extractor, dirname])
+    to_split = common_name + "/" + vid + "." + ext
+    # to_split = cache_path + "/" + vid + "." + ext
+    split_pattern = common_name + ".part.{:04d}" + "/" + vid + "." + ext
     print("to_split:", to_split)
     res = split_audio(to_split, duration, split_pattern)
     result_publisher.publish_json(

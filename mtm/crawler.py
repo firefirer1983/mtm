@@ -50,7 +50,7 @@ def crawler_action_handler(msg):
             result_publisher.publish_json(
                 routing_key="crawler.validate.result",
                 message={
-                    "validate": bool(res),
+                    "result": bool(res),
                     "message": "Valid URL" if bool(res) else "Invalid URL",
                     "url": url,
                 },
@@ -60,7 +60,7 @@ def crawler_action_handler(msg):
             result_publisher.publish_json(
                 routing_key="crawler.download.result",
                 message={
-                    "download": not bool(res),
+                    "result": not bool(res),
                     "message": "Download Fail:%s" % res
                     if bool(res)
                     else "Download Finished",

@@ -4,6 +4,7 @@ import pprint
 
 from mtm.components.info_conv import info_convert
 from ..utils.stdout_ctx import redirect_to_buffer
+from ..utils.string_fmt import remove_ext
 import youtube_dl
 
 
@@ -39,8 +40,8 @@ class Downloader:
             cache_path if cache_path else "/".join([root_dir, cache_dir])
         )
         print("cache_path:", self._cache_path, "cache_dir:", cache_dir)
-        self._info = None
         self._curr_extractor = None
+        self._curr_dirname = None
 
     def __iter__(self):
         assert self._urls, "Please init Downloader with url first"
@@ -72,6 +73,7 @@ class Downloader:
             self._curr_fulltitle = info["fulltitle"].strip()
             self._curr_vid = info["id"]
             self._curr_extractor = info["extractor"]
+            self._curr_dirname = info["dirname"] = remove_ext(info["_filename"])
             info["cache_path"] = self._cache_path
 
         return info
@@ -81,7 +83,8 @@ class Downloader:
             [
                 self._cache_path,
                 self._curr_extractor,
-                "%(fulltitle)s/%(id)s.%(ext)s",
+                self._curr_dirname,
+                "%(id)s.%(ext)s",
             ]
         )
         print("download path:", download_to)
@@ -108,6 +111,6 @@ class Downloader:
                 ydl.download(urls)
         except Exception as e:
             print(e)
-            raise
+            return str(e)
         else:
-            return True
+            return 0

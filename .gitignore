@@ -133,3 +133,4 @@ tests/youtube
 tests/out
 *.mp3
 *.jpg
+cache

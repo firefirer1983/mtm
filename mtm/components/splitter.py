@@ -74,3 +74,4 @@ def split_audio(
             stdout=subprocess.PIPE if not verbose else None,
             stderr=subprocess.PIPE if not verbose else None,
         ).communicate()
+    return True
