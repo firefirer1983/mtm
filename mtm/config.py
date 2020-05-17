@@ -12,3 +12,7 @@ validate_conf = [
     "--no-warnings",
     "--dump-json",
 ]
+
+
+DEFAULT_AUDIO_FMT = "m4a"
+SPLIT_DURATION = 15 * 60

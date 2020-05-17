@@ -1,7 +1,7 @@
 import json
 import logging
 from .components.splitter import split_audio
-
+from mtm.components.cache import Material
 from .mq import RabbitListener, RabbitProducer, RabbitPoll
 
 
@@ -20,20 +20,22 @@ result_publisher = RabbitProducer(
     queue="splitter_action_request_q",
     exchange="worker.mm",
 )
-def splitter_action_handler(msg):
+def splitter_action_handler(routing_key, msg):
     log.info("%r" % msg)
-    cache_path = json.loads(msg)["cache_path"]
-    vid = json.loads(msg)["id"]
-    duration = json.loads(msg)["duration"]
-    extractor = json.loads(msg).get("extractor", "youtube")
-    ext = json.loads(msg)["ext"]
-    dirname = json.loads(msg)["dirname"]
-    common_name = "/".join([cache_path, extractor, dirname])
-    to_split = common_name + "/" + vid + "." + ext
-    # to_split = cache_path + "/" + vid + "." + ext
-    split_pattern = common_name + ".part.{:04d}" + "/" + vid + "." + ext
+    body = json.loads(msg)
+    cache_dir, split_size = body["cache_dir"], body["split_size"]
+    material = Material(cache_dir)
+    to_split = material.data_file
+    split_pattern = (
+        cache_dir
+        + ".part.{:04d}"
+        + "/"
+        + material.unique_id
+        + "."
+        + material.ext
+    )
     print("to_split:", to_split)
-    res = split_audio(to_split, duration, split_pattern)
+    res = split_audio(to_split, material.duration, split_pattern)
     result_publisher.publish_json(
         routing_key="splitter.split.result",
         message={

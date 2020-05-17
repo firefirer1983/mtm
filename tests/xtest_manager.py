@@ -4,11 +4,6 @@ from pika.connection import URLParameters
 import json
 
 
-def print_msg(ch, method, props, body):
-    print(body)
-    ch.basic_ack(method.delivery_tag)
-
-
 def main():
     connection = BlockingConnection(
         parameters=URLParameters("amqp://guest:guest@localhost:5672/%2F")
@@ -20,14 +15,14 @@ def main():
     )
     ch = connection.channel()
     ch.exchange_declare(exchange="worker.mm", exchange_type="topic")
-    ch.queue_declare(queue="crawler_action_request_q")
+    ch.queue_declare(queue="user_action_request_q")
     ch.queue_bind(
-        queue="crawler_action_request_q",
+        queue="user_action_request_q",
         exchange="worker.mm",
-        routing_key="crawler.*.request",
+        routing_key="user.*.request",
     )
     url_list = [
-        "https://www.youtube.com/watch?v=NLJcwbpkiJ0"
+        "https://www.youtube.com/watch?v=jwSzxGuAK04",
         # "https://www.youtube.com/watch?v=PJ1QwhNL72A",
         # "https://www.youtube.com/watch?v=b5K192_hilA",
         # "https://www.youtube.com/watch?v=L0skErRNc5Y",
@@ -40,21 +35,10 @@ def main():
     for url in url_list:
         ch.basic_publish(
             exchange="worker.mm",
-            routing_key="crawler.download.request",
+            routing_key="user.download.request",
             properties=props,
-            body=json.dumps({"url": url, "username": "naeidzwwwwzlzzzz",}),
+            body=json.dumps({"url": url, "action.type": "download"}),
         )
-
-    ch.queue_declare(queue="worker_action_result_q")
-    ch.queue_bind(
-        "worker_action_result_q", "worker.mm", routing_key="*.*.result"
-    )
-    ch.basic_consume(
-        "worker_action_result_q",
-        on_message_callback=print_msg,
-        consumer_tag="xtesting",
-    )
-    ch.start_consuming()
 
 
 LOG_FORMAT = (

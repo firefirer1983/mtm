@@ -5,15 +5,15 @@ log = logging.getLogger(__name__)
 
 
 def ack_context_wrapper(cb):
-    def _f(channel, basic_deliver, properties, body):
+    def _f(channel, method, properties, body):
 
         try:
-            ret = cb(body)
+            ret = cb(method.routing_key, body)
         except Exception as e:
             log.exception(e)
             raise
         else:
-            channel.basic_ack(delivery_tag=basic_deliver.delivery_tag)
+            channel.basic_ack(delivery_tag=method.delivery_tag)
         return ret
 
     return _f
@@ -22,7 +22,7 @@ def ack_context_wrapper(cb):
 def rpc_ack_context_wrapper(cb):
     def _f(channel, method, properties, body):
         try:
-            ret = cb(body)
+            ret = cb(method.routing_key, body)
 
             channel.publish_message(
                 exchange="",

@@ -1,8 +1,13 @@
 import json
 import logging
+
+from .config import SPLIT_DURATION
 from .mq import RabbitListener, RabbitProducer, RabbitPoll
-from .utils.string_fmt import parse_basic_info
+from .components.extraction import get_extraction, get_url_formatter
 from .components.cache_manager import get_cache_manager
+from .components.meta_crawler import MetaCrawler
+from .components.cache import Material
+
 
 log = logging.getLogger(__file__)
 
@@ -13,42 +18,92 @@ request_splitter = RabbitProducer(
     "splitter.*.request", "splitter_action_request_q", "worker.mm"
 )
 
+download_fail = list()
+
 
 @RabbitListener(
     binding_key="user.*.request",
     queue="user_action_request_q",
     exchange="worker.mm",
 )
-def user_request_handler(msg):
+def user_request_handler(routing_key, msg):
     log.info("%r" % msg)
     body = json.loads(msg)
-    url = body["url"]
-    username = body["username"]
-    action = body["action.type"]
+    url, action = body["url"], body["action.type"]
     try:
-        extractor, unique_id = parse_basic_info(url)
+        extraction = get_extraction(url)
     except Exception as e:
         log.exception(e)
         return
+    meta_crawler = MetaCrawler()
 
-    mgr = get_cache_manager(extractor)
-    if action == "download":
-        cache = mgr.locate_cache(unique_id)
-        if not cache:
-            request_crawler.publish_json(
-                routing_key="crawler.download.request",
-                message={"url": url, "action.type": "download"},
-            )
-            return
-
-        if cache.need_split:
-            request_splitter.publish_json(
-                routing_key="splitter.split.request", message={}
-            )
-            return
-        log.info("Nothing need to be done for %s" % url)
+    if extraction.is_playlist:
+        playlist = meta_crawler.retrieve_playlist(extraction.url)
+        formatter = get_url_formatter(extraction.extractor)
+        playlist = [formatter.get_playable_url(item) for item in playlist]
     else:
-        raise NotImplementedError()
+        playlist = [extraction.url]
+
+    mgr = get_cache_manager(extraction.extractor)
+
+    for url in playlist:
+        extraction = get_extraction(url)
+        cache = mgr.find_cache(extraction.unique_id)
+        if action == "download":
+            if cache and cache.is_complete:
+                duration_sum = sum(p.duration for p in cache.list_partials())
+                if duration_sum >= cache.duration():
+                    request_splitter.publish_json(
+                        routing_key="splitter.split.request",
+                        message={"file": cache.file_path},
+                    )
+                    return
+            else:
+                meta = meta_crawler.get_meta(url)
+                if meta:
+                    request_crawler.publish_json(
+                        routing_key="crawler.download.request",
+                        message={
+                            "url": url,
+                            "action.type": "download",
+                            "cache_path": mgr.repo_path,
+                        },
+                    )
+                else:
+                    log.error("%s download fail!" % url)
+                return
+
+        else:
+            raise NotImplementedError()
+
+
+@RabbitListener(
+    binding_key="*.*.result",
+    queue="worker_action_result_q",
+    exchange="worker.mm",
+)
+def worker_action_result_handler(routing_key, msg):
+    print("worker action result handler")
+    print(routing_key, msg)
+    if routing_key == "crawler.download.result":
+        body = json.loads(msg)
+        result = body["result"]
+        if result:
+            cache_dir = body["cache_dir"]
+            material = Material(cache_dir)
+            if material.duration > SPLIT_DURATION:
+                request_splitter.publish_json(
+                    routing_key="splitter.split.request",
+                    message={
+                        "cache_dir": cache_dir,
+                        "split_duration": SPLIT_DURATION,
+                    },
+                )
+
+    elif routing_key == "splitter.split.result":
+        log.info("split done with result:", msg)
+    else:
+        raise NotImplemented()
 
 
 class Manager(RabbitPoll):

@@ -1,12 +1,14 @@
-import abc
 import re
-from urllib.parse import urlparse, parse_qsl
+
+RE_IS_PARTIAL = re.compile("\.part\.[0-9]{4}$")
+RE_PARTIAL_UNIQUE_ID = re.compile("-(.*)(?:\.part\.[0-9]{4})$")
+RE_UNCUT_UNIQUE_ID = re.compile("-(.*)$")
 
 
 def fmt_dirname(s):
 
     return re.sub(
-        "[’!\"#$%&'()*+,-./:;<=>?@，。?★、…【】《》？“”‘’！[\\]^_`{|}~]+", "", s,
+        "[’!\"#$%&'()*+,-./:;<=>?@，。?★、…【】《》？“”‘’！[\\]^_`{|}~]+", "", s
     )
 
 
@@ -28,59 +30,14 @@ def remove_ext(filename):
     return filename[:pos]
 
 
-class ParserStrategy:
-    @abc.abstractmethod
-    def parse(self, *args, **kwargs):
-        raise NotImplementedError
+def is_partial_dir(dir_name):
+    res = RE_IS_PARTIAL.search(dir_name)
+    return bool(res)
 
 
-class YoutubeUrlParser(ParserStrategy):
-    def parse(self, data):
-        for qs in parse_qsl(data.query):
-            if qs[0] == "v":
-                return qs[1]
-        return None
-
-
-class YoutubeDirnameParser(ParserStrategy):
-    def parse(self, data):
-        pos = -1
-        for c in reversed(data):
-            if c == "-":
-                break
-            pos -= 1
-        else:
-            return None
-        return data[pos + 1 :]
-
-    @property
-    def extractor(self):
-        return "youtube"
-
-
-extractor_registry = {
-    "www.youtube.com": "youtube",
-}
-
-url_parser_registry = {
-    "youtube": YoutubeUrlParser(),
-}
-
-
-def parse_basic_info(url):
-    result = urlparse(url)
-    for k, v in extractor_registry.items():
-        if result.netloc == k:
-            parser = url_parser_registry[v]
-            return v, parser.parse(url)
+def parse_unique_id(dir_name):
+    if is_partial_dir(dir_name):
+        res = RE_PARTIAL_UNIQUE_ID.search(dir_name)
     else:
-        raise NotImplemented("Invalid URL or not support URL")
-
-
-def parse_unique_id_from_dirname(extractor, dirname):
-    parser = None
-    for k, v in path_parser_registry.items():
-        if v.extractor == extractor:
-            parser = v
-    if parser:
-        return parser.parse(dirname)
+        res = RE_UNCUT_UNIQUE_ID.search(dir_name)
+    return res.groups()[0] if len(res.groups()) else None
