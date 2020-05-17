@@ -1,7 +1,7 @@
 import json
 import logging
 
-from .config import SPLIT_DURATION
+from .config import MAX_DURATION
 from .mq import RabbitListener, RabbitProducer, RabbitPoll
 from .components.extraction import get_extraction, get_url_formatter
 from .components.cache_manager import get_cache_manager
@@ -91,12 +91,12 @@ def worker_action_result_handler(routing_key, msg):
         if result:
             cache_dir = body["cache_dir"]
             material = Material(cache_dir)
-            if material.duration > SPLIT_DURATION:
+            if material.duration > MAX_DURATION:
                 request_splitter.publish_json(
                     routing_key="splitter.split.request",
                     message={
                         "cache_dir": cache_dir,
-                        "split_duration": SPLIT_DURATION,
+                        "partial_duration": MAX_DURATION,
                     },
                 )
 

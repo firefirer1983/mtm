@@ -23,9 +23,8 @@ result_publisher = RabbitProducer(
 def splitter_action_handler(routing_key, msg):
     log.info("%r" % msg)
     body = json.loads(msg)
-    cache_dir, split_size = body["cache_dir"], body["split_size"]
+    cache_dir, partial_duration = body["cache_dir"], body["partial_duration"]
     material = Material(cache_dir)
-    to_split = material.data_file
     split_pattern = (
         cache_dir
         + ".part.{:04d}"
@@ -34,8 +33,8 @@ def splitter_action_handler(routing_key, msg):
         + "."
         + material.ext
     )
-    print("to_split:", to_split)
-    res = split_audio(to_split, material.duration, split_pattern)
+    print("to_split:", material.data_file)
+    res = split_audio(material.data_file, partial_duration, split_pattern)
     result_publisher.publish_json(
         routing_key="splitter.split.result",
         message={
