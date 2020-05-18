@@ -3,9 +3,11 @@ from pika import BlockingConnection, BasicProperties
 from pika.connection import URLParameters
 import json
 
+log = logging.getLogger(__file__)
+
 
 def print_msg(ch, method, props, body):
-    print(body)
+    log.info("%s: %r" % (method.routing_key, body))
     ch.basic_ack(method.delivery_tag)
 
 
@@ -27,8 +29,7 @@ def main():
         routing_key="crawler.*.request",
     )
     url_list = [
-        "https://www.youtube.com/watch?v=NLJcwbpkiJ0"
-        # "https://www.youtube.com/watch?v=PJ1QwhNL72A",
+        "https://www.youtube.com/watch?v=PJ1QwhNL72A",
         # "https://www.youtube.com/watch?v=b5K192_hilA",
         # "https://www.youtube.com/watch?v=L0skErRNc5Y",
         # "https://www.youtube.com/watch?v=G8GWtGZuHSk",
@@ -42,7 +43,13 @@ def main():
             exchange="worker.mm",
             routing_key="crawler.download.request",
             properties=props,
-            body=json.dumps({"url": url, "username": "naeidzwwwwzlzzzz",}),
+            body=json.dumps(
+                {
+                    "url": url,
+                    "username": "naeidzwwwwzlzzzz",
+                    "cache_path": "/home/xy/repo/python/mtm/cache/youtube",
+                }
+            ),
         )
 
     ch.queue_declare(queue="worker_action_result_q")

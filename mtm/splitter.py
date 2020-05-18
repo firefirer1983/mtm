@@ -38,7 +38,7 @@ def splitter_action_handler(routing_key, msg):
     result_publisher.publish_json(
         routing_key="splitter.split.result",
         message={
-            "split": bool(res),
+            "result": bool(res),
             "message": "split success" if bool(res) else "split fail",
             "url": res,
         },

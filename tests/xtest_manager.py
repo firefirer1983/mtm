@@ -3,6 +3,13 @@ from pika import BlockingConnection, BasicProperties
 from pika.connection import URLParameters
 import json
 
+log = logging.getLogger(__file__)
+
+
+def print_msg(ch, method, props, body):
+    log.info("%s: %r" % (method.routing_key, body))
+    ch.basic_ack(method.delivery_tag)
+
 
 def main():
     connection = BlockingConnection(
@@ -22,9 +29,8 @@ def main():
         routing_key="user.*.request",
     )
     url_list = [
-        "https://www.youtube.com/watch?v=jwSzxGuAK04",
         # "https://www.youtube.com/watch?v=PJ1QwhNL72A",
-        # "https://www.youtube.com/watch?v=b5K192_hilA",
+        "https://www.youtube.com/watch?v=b5K192_hilA",
         # "https://www.youtube.com/watch?v=L0skErRNc5Y",
         # "https://www.youtube.com/watch?v=G8GWtGZuHSk",
         # "https://www.youtube.com/watch?v=Vn4wxZlaFYc",
@@ -39,6 +45,17 @@ def main():
             properties=props,
             body=json.dumps({"url": url, "action.type": "download"}),
         )
+
+    ch.queue_declare(queue="user_action_result_q")
+    ch.queue_bind(
+        "user_action_result_q", "worker.mm", routing_key="user.*.result"
+    )
+    ch.basic_consume(
+        "user_action_result_q",
+        on_message_callback=print_msg,
+        consumer_tag="user",
+    )
+    ch.start_consuming()
 
 
 LOG_FORMAT = (

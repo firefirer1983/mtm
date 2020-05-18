@@ -18,6 +18,10 @@ request_splitter = RabbitProducer(
     "splitter.*.request", "splitter_action_request_q", "worker.mm"
 )
 
+user_result_publisher = RabbitProducer(
+    "user.*.result", "user_action_result_q", "worker.mm"
+)
+
 download_fail = list()
 
 
@@ -38,11 +42,11 @@ def user_request_handler(routing_key, msg):
     meta_crawler = MetaCrawler()
 
     if extraction.is_playlist:
-        playlist = meta_crawler.retrieve_playlist(extraction.url)
+        playlist = meta_crawler.retrieve_playlist(extraction.url_)
         formatter = get_url_formatter(extraction.extractor)
         playlist = [formatter.get_playable_url(item) for item in playlist]
     else:
-        playlist = [extraction.url]
+        playlist = [extraction.url_]
 
     mgr = get_cache_manager(extraction.extractor)
 
@@ -101,7 +105,8 @@ def worker_action_result_handler(routing_key, msg):
                 )
 
     elif routing_key == "splitter.split.result":
-        log.info("split done with result:", msg)
+        body = json.loads(msg)
+        log.info("split done with result:", body)
     else:
         raise NotImplemented()
 
