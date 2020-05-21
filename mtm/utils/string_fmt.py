@@ -31,7 +31,7 @@ def remove_ext(filename):
 
 
 def is_partial_dir(dir_name):
-    res = RE_IS_PARTIAL.search(dir_name)
+    res = RE_IS_PARTIAL.search(str(dir_name))
     return bool(res)
 
 
@@ -41,3 +41,8 @@ def parse_unique_id(dir_name):
     else:
         res = RE_UNCUT_UNIQUE_ID.search(dir_name)
     return res.groups()[0] if len(res.groups()) else None
+
+
+def check_file_with_ext(ext, file_path):
+    re_ext_file = re.compile(".%s$" % ext)
+    return bool(re_ext_file.search(str(file_path)))

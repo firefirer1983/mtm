@@ -16,3 +16,4 @@ validate_conf = [
 
 DEFAULT_AUDIO_FMT = "m4a"
 MAX_DURATION = 15 * 60
+MIN_DURATION = 3 * 60

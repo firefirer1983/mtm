@@ -5,6 +5,8 @@ import ffmpeg
 import subprocess
 from decimal import Decimal
 
+from ..config import MIN_DURATION
+
 log = logging.getLogger(__file__)
 
 
@@ -27,6 +29,8 @@ def get_chunked_time(duration, total_duration):
     while True:
         next_ = ts + duration
         next_ = total_duration if next_ >= total_duration else next_
+        if next_ - ts < MIN_DURATION:
+            break
         chunks.append((ts, next_))
         if next_ >= total_duration:
             break
@@ -51,6 +55,7 @@ def _makedirs(path):
 def split_audio(
     in_filename, duration, out_pattern, verbose=False,
 ):
+    in_filename = str(in_filename)
     total_duration = get_duration(in_filename)
     durations = get_chunked_time(duration, total_duration)
 
