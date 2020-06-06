@@ -4,12 +4,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
-
 log = logging.getLogger(__name__)
-
-db_url = os.environ.get(
-    "db", "mysql+pymysql://root:123456789@127.0.0.1:3306/mtm"
-)
+USE_SQLITE = True
+if USE_SQLITE:
+    basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+    db_url = f"sqlite:///{os.path.join(basedir, 'dev.sqlite')}"
+else:
+    db_url = os.environ.get(
+        "db", "mysql+pymysql://root:123456789@127.0.0.1:3306/mtm"
+    )
 db_engine = create_engine(db_url)
 
 Session = sessionmaker(bind=db_engine)

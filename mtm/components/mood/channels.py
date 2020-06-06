@@ -23,7 +23,6 @@ class MMChannel:
         desc = filter_emoji(
             str(info_meta["description"][:DESCRIPTION_MAX_LEN])
         )
-        print(desc)
         release_note = {
             "title": info_meta["title"],
             "cover": image_meta["url"],
@@ -36,7 +35,6 @@ class MMChannel:
         ret = requests.post(
             url=host + path_, json=release_note, auth=self._auth
         )
-        pdb.set_trace()
         assert ret.status_code == 200, "release mm fail"
         return True
 

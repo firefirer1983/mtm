@@ -1,9 +1,12 @@
+import os
 import logging
 from pika import BlockingConnection, BasicProperties
 from pika.connection import URLParameters
 import json
 
 log = logging.getLogger(__file__)
+CACHE_REPO = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
+YOUTUBE_CACHE_REPO = os.path.join(CACHE_REPO, "youtube")
 
 
 def print_msg(ch, method, props, body):
@@ -47,7 +50,7 @@ def main():
                 {
                     "url": url,
                     "username": "naeidzwwwwzlzzzz",
-                    "cache_path": "/home/xy/repo/python/mtm/cache/youtube",
+                    "cache_path": YOUTUBE_CACHE_REPO,
                 }
             ),
         )

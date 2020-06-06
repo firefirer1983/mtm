@@ -10,3 +10,7 @@ def rm_dir_safe(dir_path):
             os.remove(str(d))
     else:
         os.rmdir(str(dir_path))
+
+
+if __name__ == '__main__':
+    rm_dir_safe("test_rm")

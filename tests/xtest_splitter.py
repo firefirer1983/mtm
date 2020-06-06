@@ -27,7 +27,7 @@ def main():
         properties=props,
         body=json.dumps(
             {
-                "cache_dir": "/home/xy/repo/python/mtm/cache/youtube/好葉怎樣練習冥想完整教學 動畫講解-NLJcwbpkiJ0",
+                "cache_dir": "/home/xy/misc/mtm/cache/youtube/好葉怎樣練習冥想完整教學 動畫講解-NLJcwbpkiJ0",
                 "action.type": "split",
                 "partial_duration": 2 * 60,
             }

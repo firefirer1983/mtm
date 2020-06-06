@@ -1,7 +1,11 @@
-from mtm.components.downloader import Downloader
 import multiprocessing
+import os
 from functools import partial
 
+from mtm.components.downloader import Downloader
+
+CACHE_REPO = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
+YOUTUBE_CACHE_REPO = os.path.join(CACHE_REPO, "youtube")
 
 all_urls = [
     "https://www.youtube.com/watch?v=G8GWtGZuHSk",
@@ -24,7 +28,7 @@ all_urls = [
 
 def download(url):
     dwl = Downloader()
-    dwl.download(url, "/home/xy/repo/python/mtm/cache/youtube")
+    dwl.download(url, YOUTUBE_CACHE_REPO)
 
 
 if __name__ == "__main__":
@@ -33,13 +37,13 @@ if __name__ == "__main__":
     start_ = 0
     end_ = start_ + batch_
     while True:
-        for url_ in all_urls[start_ : start_ + batch_]:
+        for url_ in all_urls[start_: start_ + batch_]:
             pr = multiprocessing.Process(target=partial(download, url_))
             pr.start()
             prs.append(pr)
         for i, p in enumerate(prs):
             p.join()
-
+        
         if start_ + batch_ == len(all_urls):
             break
         start_ += batch_
@@ -53,4 +57,3 @@ if __name__ == "__main__":
         # end_ = start_ + batch_
         # if end_ > len(all_urls):
         #     end_ = len(all_urls)
-  

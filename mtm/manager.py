@@ -52,7 +52,7 @@ def user_request_handler(routing_key, msg):
 
     for url in playlist:
         extraction = get_extraction(url)
-        cache = mgr.find_cache(extraction.unique_id)
+        cache = mgr.get_cache(extraction.unique_id)
         if action == "download":
             if cache and cache.is_complete:
                 duration_sum = sum(p.duration for p in cache.list_partials())

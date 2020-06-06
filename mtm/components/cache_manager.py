@@ -1,62 +1,73 @@
-import os
+import abc
 import logging
+import os
 from pathlib import Path
 
-from mtm.components.cache import Partial, Partials, Material
-from ..utils.string_fmt import is_partial_dir, parse_unique_id
-import abc
-
+from mtm.components.cache import Material
+from ..utils.dir_tools import rm_dir_safe
+from ..utils.string_fmt import is_material_dir, is_partial_file
 
 log = logging.getLogger(__file__)
 
-cache_dir_name = "cache"
-default_cache_root = (
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    + "/"
-    + cache_dir_name
-)
-
-
-def list_sub_dirs(extractor):
-    for path in Path(default_cache_root).iterdir():
-        if str(path) == extractor:
-            return list(path.iterdir())
-    return []
+CACHE_REPO = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "cache")
+YOUTUBE_CACHE_REPO = os.path.join(CACHE_REPO, "youtube")
 
 
 class CacheManager(abc.ABC):
     def __init__(self, name):
         self._extractor = name
-
+    
     @property
     def dirname(self):
         return str(self._extractor)
-
+    
     @abc.abstractmethod
-    def find_cache(self, unique_id):
+    def get_cache(self, unique_id):
         pass
-
+    
     @property
     def repo_path(self):
-        return default_cache_root + "/" + self.dirname
+        return os.path.join(CACHE_REPO, self.dirname)
 
 
 class YoutubeCache(CacheManager):
     def __init__(self):
         super().__init__("youtube")
+        self._materials = {}
+        
+        for d in Path(self.repo_path).iterdir():
+            if not is_partial_file(str(d)):
+                material = Material.create(d)
+                self._materials[material.unique_id] = material
+                
+    def get_cache(self, unique_id):
+        return self._materials.get(unique_id, None)
+    
+    def list_cache(self):
+        return self._materials.values()
+    
+    def purge_cache_partials(self, unique_id):
+        material = self._materials.get(unique_id, None)
+        if material:
+            for partial in material.list_partials():
+                rm_dir_safe(partial.file_path)
+            material.refresh_partials()
+    
+    def purge_cache_only(self, unique_id):
+        material = self._materials[unique_id]
+        if material:
+            self.purge_cache_partials(unique_id)
+            rm_dir_safe(material.file_path)
+            del self._materials[unique_id]
+            return True
 
-    def find_cache(self, unique_id):
-        partials_ = Partials()
-        material_ = None
-        for d in list_sub_dirs(self.dirname):
-            if parse_unique_id(d) == unique_id:
-                if is_partial_dir(d):
-                    partials_.append(Partial(d))
-                else:
-                    material_ = Material(d)
-        if material_ and partials_:
-            material_.add_partials(partials_)
-        return material_
+    def purge_cache_and_partials(self, unique_id):
+        material = self._materials[unique_id]
+        self.purge_cache_partials(unique_id)
+        rm_dir_safe(material.file_path)
+        del self._materials[unique_id]
+        return True
 
 
 manager_registry = [YoutubeCache()]

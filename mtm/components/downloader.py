@@ -74,9 +74,8 @@ class Downloader:
             self._url = url
             meta_crawler = MetaCrawler()
             meta = meta_crawler.get_meta(url)
-            title = fmt_dirname(meta["title"])
             unique_id = meta["id"]
-            self._download_dir = "%s/%s-%s" % (cache_path, title, unique_id)
+            self._download_dir = "%s/%s" % (cache_path, unique_id)
             print("download_dir:", self._download_dir)
             self._opt = {
                 "proxy": "socks5://127.0.0.1:17720",

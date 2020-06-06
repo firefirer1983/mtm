@@ -1,9 +1,10 @@
-import os
 import errno
 import logging
-import ffmpeg
+import os
 import subprocess
 from decimal import Decimal
+
+import ffmpeg
 
 from ..config import MIN_DURATION
 
@@ -11,15 +12,18 @@ log = logging.getLogger(__file__)
 
 
 def get_duration(file_path):
-    probe = ffmpeg.probe(file_path)
-    audio_stream = next(
-        (
-            stream
-            for stream in probe["streams"]
-            if stream["codec_type"] == "audio"
-        ),
-        None,
-    )
+    try:
+        probe = ffmpeg.probe(file_path)
+        audio_stream = next(
+            (
+                stream
+                for stream in probe["streams"]
+                if stream["codec_type"] == "audio"
+            ),
+            None,
+        )
+    except ffmpeg._run.Error as e:
+        return Decimal(0)
     return Decimal(audio_stream["duration"])
 
 
@@ -58,12 +62,12 @@ def split_audio(
     in_filename = str(in_filename)
     total_duration = get_duration(in_filename)
     durations = get_chunked_time(duration, total_duration)
-
+    
     for i, (start_time, end_time) in enumerate(durations):
         time = end_time - start_time
         out_filename = out_pattern.format(i, i=i)
         _makedirs(os.path.dirname(out_filename))
-
+        
         log.info(
             "{}: start={:.02f}, end={:.02f}, duration={:.02f}".format(
                 out_filename, start_time, end_time, time
@@ -72,9 +76,9 @@ def split_audio(
         _logged_popen(
             (
                 ffmpeg.input(in_filename, ss=start_time, t=time)
-                .output(out_filename)
-                .overwrite_output()
-                .compile()
+                    .output(out_filename)
+                    .overwrite_output()
+                    .compile()
             ),
             stdout=subprocess.PIPE if not verbose else None,
             stderr=subprocess.PIPE if not verbose else None,

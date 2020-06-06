@@ -1,8 +1,12 @@
-from mtm.components.downloader import Downloader
+import os
 import sys
-from os import path
 
-sys.path.append(path.join(path.dirname(__file__), ".."))
+from mtm.components.downloader import Downloader
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
+CACHE_REPO = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
+YOUTUBE_CACHE_REPO = os.path.join(CACHE_REPO, "youtube")
 
 urls = [
     "https://www.youtube.com/watch?v=L0skErRNc5Y",
@@ -15,4 +19,4 @@ urls = [
 
 if __name__ == "__main__":
     dlw = Downloader()
-    dlw.download(urls[1], "/home/xy/repo/python/mtm/cache/youtube")
+    dlw.download(urls[1], YOUTUBE_CACHE_REPO)

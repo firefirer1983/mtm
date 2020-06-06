@@ -1,12 +1,12 @@
 import re
 
-RE_IS_PARTIAL = re.compile("\.part\.[0-9]{4}$")
-RE_PARTIAL_UNIQUE_ID = re.compile("-(.*)(?:\.part\.[0-9]{4})$")
+RE_IS_PARTIAL = re.compile("\.part\.[0-9]{4}.m4a$")
+RE_IS_MATERIAL = re.compile("^[\S\s]*-(.*)$")
+RE_PARTIAL_UNIQUE_ID = re.compile("-(.*)(?:\.part\.[0-9]{4}).m4a$")
 RE_UNCUT_UNIQUE_ID = re.compile("-(.*)$")
 
 
 def fmt_dirname(s):
-
     return re.sub(
         "[’!\"#$%&'()*+,-./:;<=>?@，。?★、…【】《》？“”‘’！[\\]^_`{|}~]+", "", s
     )
@@ -30,19 +30,25 @@ def remove_ext(filename):
     return filename[:pos]
 
 
-def is_partial_dir(dir_name):
+def is_partial_file(dir_name):
     res = RE_IS_PARTIAL.search(str(dir_name))
     return bool(res)
 
 
 def parse_unique_id(dir_name):
-    if is_partial_dir(dir_name):
-        res = RE_PARTIAL_UNIQUE_ID.search(dir_name)
-    else:
-        res = RE_UNCUT_UNIQUE_ID.search(dir_name)
+    dir_name = str(dir_name)
+    res = RE_UNCUT_UNIQUE_ID.search(dir_name)
     return res.groups()[0] if len(res.groups()) else None
 
 
 def check_file_with_ext(ext, file_path):
     re_ext_file = re.compile(".%s$" % ext)
     return bool(re_ext_file.search(str(file_path)))
+
+
+def is_material_dir(dir_name):
+    return bool(RE_IS_MATERIAL.search(str(dir_name)))
+
+
+def is_playlist(url):
+    pass

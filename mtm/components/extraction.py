@@ -57,7 +57,7 @@ extractor_registry = {"www.youtube.com": "youtube"}
 extraction_registry = {"youtube": YoutubeExtraction}
 
 
-def get_extraction(url):
+def get_extraction(url) -> "ExtractionStrategy":
     result = urlparse(url)
     for k, v in extractor_registry.items():
         if result.netloc == k:

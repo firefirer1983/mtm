@@ -1,8 +1,10 @@
 import os
-from multiprocessing import Process, Queue, Pool
+from multiprocessing import Process, Queue
 from queue import Empty
+
 from mtm.components.downloader import Downloader
 
+CACHE_REPO = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
 
 download_urls = [
     "https://www.youtube.com/watch?v=b5K192_hilA",
@@ -99,7 +101,7 @@ def download(tsk_q):
             dwl = Downloader()
             print("start downloading %s" % url_)
             try:
-                dwl.download(url_, "/home/xy/repo/python/mtm/cache/youtube")
+                dwl.download(url_, os.path.join(CACHE_REPO, "youtube"))
             except Exception as e:
                 print("shit happen[%s] when download:%s" % (str(e), url_))
             else:
@@ -113,6 +115,6 @@ if __name__ == "__main__":
         pr = Process(target=download, args=(download_q,))
         pr.start()
         prs.append(pr)
-
+    
     for pr in prs:
         pr.join()
