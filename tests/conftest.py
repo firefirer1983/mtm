@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import pdb
+
 import pytest
 from collections import namedtuple
 from mtm.components.mood.auth import Auth
@@ -20,6 +22,8 @@ def test_account():
 def login(request, test_account):
     auth = Auth(test_account.username, test_account.code)
     assert auth.login(), "login failed!"
+    
+    pdb.set_trace()
     request.addfinalizer(auth.logout)
     return auth
 

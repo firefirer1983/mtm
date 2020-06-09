@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 from faker import Faker
@@ -8,7 +9,7 @@ from mtm.components.mood.channels import MMChannel
 from mtm.model.database import scoped_session
 from mtm.model.models import User
 from mtm.utils.data_repo import get_nick_names
-from mtm.components.mood.user import UserProfile
+
 icon_repo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                               "cache/icon")
 
@@ -38,11 +39,15 @@ def upload_image_task(task_queue):
     pass
 
 
+PASSWORD_OR_VERIFY = "123456"
+
+
 def main():
     nicknames = get_nick_names()
     for index, file_path in enumerate(Path(icon_repo_path).iterdir()):
         try:
-            phone, nickname, icon = get_fake_phone(), nicknames[index], str(file_path)
+            phone, nickname, icon = get_fake_phone(), nicknames[index], str(
+                file_path)
             print(phone, nickname, icon)
             with scoped_session(auto_commit=True) as s:
                 user = User(
@@ -50,8 +55,10 @@ def main():
                     phone=phone,
                     icon=icon,
                     nickname=nickname,
+                    password=PASSWORD_OR_VERIFY,
+                    birthday=fk.date_between()
                 )
-                with login_context(phone, "123456") as token:
+                with login_context(phone, PASSWORD_OR_VERIFY) as token:
                     channel = MMChannel(token)
                     # upload_url, upload_key = channel.upload_image(icon)
                     # profiler = UserProfile(token)
@@ -62,11 +69,10 @@ def main():
                     # )
                     upload_url, upload_key = channel.upload_image(icon)
                 user.icon_url = upload_url
-                user.save(s)
-                
-            
-
-                
+                user.icon_key = upload_key
+                s.add(user)
+                time.sleep(0.3)
+        
         except IndexError:
             break
 

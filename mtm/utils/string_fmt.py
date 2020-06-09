@@ -4,6 +4,7 @@ RE_IS_PARTIAL = re.compile("\.part\.[0-9]{4}.m4a$")
 RE_IS_MATERIAL = re.compile("^[\S\s]*-(.*)$")
 RE_PARTIAL_UNIQUE_ID = re.compile("-(.*)(?:\.part\.[0-9]{4}).m4a$")
 RE_UNCUT_UNIQUE_ID = re.compile("-(.*)$")
+RE_EXTENSION = re.compile("^.*\.(.*)$")
 
 
 def fmt_dirname(s):
@@ -52,3 +53,10 @@ def is_material_dir(dir_name):
 
 def is_playlist(url):
     pass
+
+
+def parse_ext(file_name):
+    res = RE_EXTENSION.search(file_name)
+    if not len(res.groups()):
+        raise RuntimeError("No extension found!")
+    return res.groups()[0]

@@ -11,7 +11,6 @@ log = logging.getLogger(__file__)
 
 CACHE_REPO = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "cache")
-YOUTUBE_CACHE_REPO = os.path.join(CACHE_REPO, "youtube")
 
 
 class CacheManager(abc.ABC):
@@ -32,8 +31,8 @@ class CacheManager(abc.ABC):
 
 
 class YoutubeCache(CacheManager):
-    def __init__(self):
-        super().__init__("youtube")
+    def __init__(self, name):
+        super().__init__(name=name)
         self._materials = {}
         
         for d in Path(self.repo_path).iterdir():
@@ -69,11 +68,3 @@ class YoutubeCache(CacheManager):
         del self._materials[unique_id]
         return True
 
-
-manager_registry = [YoutubeCache()]
-
-
-def get_cache_manager(extractor):
-    for m in manager_registry:
-        if m.dirname == extractor:
-            return m

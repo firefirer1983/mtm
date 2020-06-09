@@ -4,7 +4,7 @@
 # * 'gtrp' and 'gtr' create a GET request with or without query parameters;
 # * 'ptr' and 'ptrp' create a POST request with a simple or parameter-like body;
 # * 'mptr' and 'fptr' create a POST request to submit a form with a text or file field (multipart/form-data);
-POST http://192.168.77.10:8081
+POST http://t.main.wedeep.com.cn/user/login
 Content-Type: application/json
 
 {}
