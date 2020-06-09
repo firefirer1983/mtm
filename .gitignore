@@ -134,3 +134,4 @@ tests/out
 *.mp3
 *.jpg
 cache
+*.jpeg
