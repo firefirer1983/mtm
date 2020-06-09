@@ -1,4 +1,5 @@
 import os
+import time
 from multiprocessing import Queue, Process
 from queue import Empty
 
@@ -28,15 +29,17 @@ def upload_task(task_queue):
                     full_path=cache.file_path,
                     duration=cache.duration,
                     title=cache.title,
-                    is_partial=cache.is_partial
+                    is_partial=cache.is_partial,
+                    description=cache.description
                 )
                 assert ret, "insert cache fail!"
-                url, key = channel.fake_upload_audio(cache.file_path)
+                url, key = channel.upload_audio(cache.file_path)
                 MMStorageEntry.finish_upload(
                     os.path.basename(cache.file_path),
                     url=url,
                     key=key
                 )
+                time.sleep(0.1)
         
         except Empty as e:
             print("No more download")

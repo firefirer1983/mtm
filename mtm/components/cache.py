@@ -8,13 +8,15 @@ from ..utils.string_fmt import is_partial_file, filter_emoji
 
 
 class Cache:
-    def __init__(self, file_path, unique_id, title, is_partial=False):
+    def __init__(self, file_path, unique_id, title, description,
+                 is_partial=False):
         self._file_path = str(file_path)
         self._is_complete = False
         self._unique_id = unique_id
         self._title = title
         self._is_partial = is_partial
         self._duration = None
+        self._description = description
     
     @property
     def unique_id(self):
@@ -56,18 +58,22 @@ class Cache:
     @property
     def title(self):
         return self._title
+    
+    @property
+    def description(self):
+        return self._description
 
 
 class Partial(Cache):
-    def __init__(self, file_path, unique_id, title):
+    def __init__(self, file_path, unique_id, title, desc):
         self._unique_id = unique_id
-        super().__init__(file_path, unique_id, title, is_partial=True)
-    
+        super().__init__(file_path, unique_id, title, desc, is_partial=True)
+
 
 class Origin(Cache):
-    def __init__(self, file_path, unique_id, title):
+    def __init__(self, file_path, unique_id, title, desc):
         self._unique_id = unique_id
-        super().__init__(file_path, unique_id, title, is_partial=False)
+        super().__init__(file_path, unique_id, title, desc, is_partial=False)
 
 
 class Material:
@@ -82,7 +88,8 @@ class Material:
             self._file_path + "/" + self._unique_id + "." + "info.json", "r"
         ) as f:
             self._info = json.loads(f.read())
-        origin_title = filter_emoji(self._info["title"])[:256]
+        origin_title = filter_emoji(self._info["title"])[:50]
+        desc = filter_emoji(self._info["description"])[:100]
         partials = []
         for d in Path(self._file_path).iterdir():
             if is_partial_file(d):
@@ -90,11 +97,11 @@ class Material:
         partials = sorted(partials, key=lambda x: x[0])
         for index, p in enumerate(partials):
             self._partials.append(
-                Partial(p[0], p[1], origin_title + " PART %u" % index))
+                Partial(p[0], p[1], origin_title + " PART %u" % index, desc))
         self._left_over = 0
         
         self._origin = Origin(self._file_path + "/" + self._unique_id + ".m4a",
-                              self._unique_id, origin_title)
+                              self._unique_id, origin_title, desc)
     
     @property
     def total_size(self):

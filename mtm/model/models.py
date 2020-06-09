@@ -5,7 +5,8 @@ from sqlalchemy import (
     String,
     Column,
     DECIMAL,
-    DateTime
+    DateTime,
+    INTEGER
 )
 
 from mtm.model.database import db_engine
@@ -80,6 +81,7 @@ class User(MyBase, TimestampMixin):
 
 class MMStorageEntry(MyBase, TimestampMixin):
     __tablename__ = "mm_storage_entry"
+    author = Column(String(32), nullable=True)
     origin = Column(String(32), default="youtube")
     unique_id = Column(String(32), nullable=True)
     directory = Column(String(255), nullable=False)
@@ -91,6 +93,7 @@ class MMStorageEntry(MyBase, TimestampMixin):
     upload_key = Column(String(255), nullable=True)
     is_partial = Column(Boolean, nullable=False, default=False)
     title = Column(String(255), nullable=False)
+    description = Column(String(255))
     
     @property
     def full_path(self):
@@ -103,7 +106,8 @@ class MMStorageEntry(MyBase, TimestampMixin):
     @classmethod
     def insert_one(cls, origin=origin, unique_id=unique_id,
                    full_path=full_path,
-                   duration=duration, title="", is_partial=False):
+                   duration=duration, title="", description="",
+                   is_partial=False):
         directory, file_name, file_ext = cls.parse_full_path(full_path)
         try:
             with scoped_session(auto_commit=True) as s:
@@ -116,7 +120,8 @@ class MMStorageEntry(MyBase, TimestampMixin):
                         file_name=file_name,
                         file_ext=file_ext,
                         title=title,
-                        is_partial=is_partial
+                        is_partial=is_partial,
+                        description=description
                     )
                 )
         except Exception as e:
@@ -135,6 +140,7 @@ class MMStorageEntry(MyBase, TimestampMixin):
                 file_name=file_name).one()
             entry.upload_url = url
             entry.upload_key = key
+            entry.uploaded = True
 
 
 class ImgStorageEntry(MyBase, TimestampMixin):
@@ -178,14 +184,33 @@ class ImgStorageEntry(MyBase, TimestampMixin):
         return os.path.dirname(val), os.path.basename(val), parse_ext(val)
     
     @classmethod
-    def finish_upload(cls, file_name, url, key, preview_url, preview_key):
+    def finish_upload(cls, directory, file_name, url, key, preview_url,
+                      preview_key):
         with scoped_session(auto_commit=True) as s:
             entry: ImgStorageEntry = s.query(cls).filter_by(
-                file_name=file_name).one()
+                file_name=file_name).filter_by(directory=directory).one()
             entry.upload_url = url
             entry.upload_key = key
             entry.preview_url = preview_url
             entry.preview_key = preview_key
+            entry.uploaded = True
+
+
+class ReleaseRecord(MyBase, TimestampMixin):
+    __tablename__ = "release_record"
+    author = Column(String(32), nullable=False)
+    nickname = Column(String(32), nullable=False)
+    password_or_verify = Column(String(32), nullable=False)
+    title = Column(String(32), nullable=False)
+    mm_entry_url = Column(String(255), nullable=False)
+    mm_entry_key = Column(String(255), nullable=False)
+    img_entry_url = Column(String(255), nullable=False)
+    img_entry_key = Column(String(255), nullable=False)
+    preview_url = Column(String(255), nullable=False)
+    preview_key = Column(String(255), nullable=False)
+    duration = Column(DECIMAL(precision=18), nullable=False)
+    style = Column(INTEGER, nullable=False)
+    released = Column(Boolean, default=False)
 
 
 def create_all_tables():

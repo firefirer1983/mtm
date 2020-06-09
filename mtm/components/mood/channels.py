@@ -1,8 +1,8 @@
+import pdb
 import time
 
 import requests
 
-from mtm.utils.string_fmt import filter_emoji
 from . import host
 
 DESCRIPTION_MAX_LEN = 50
@@ -21,22 +21,23 @@ class MMChannel:
         assert ret.status_code == 200, "list mm fail"
         return ret.json()
     
-    def release_mm(self, info_meta, audio_meta, image_meta):
-        desc = filter_emoji(
-            str(info_meta["description"][:DESCRIPTION_MAX_LEN])
-        )
+    def release_mm(self, author, title, mm_entry_key, img_key, preview_key, duration,
+                   style):
         release_note = {
-            "title": info_meta["title"],
-            "cover": image_meta["url"],
-            "duration": str(info_meta["duration"]),
-            "description": desc,
-            "downloadURL": audio_meta["url"],
-            "showStyle": SHOW_STYLE,
+            "author": author,
+            "title": title,
+            "cover": preview_key,
+            "duration": str(duration),
+            "sourceKey": mm_entry_key,
+            "description": "",
+            "backGround": img_key,
+            "showStyle": style,
         }
         path_ = "/show"
         ret = requests.post(
             url=host + path_, json=release_note, auth=self._auth
         )
+        pdb.set_trace()
         assert ret.status_code == 200, "release mm fail"
         return True
     
@@ -50,15 +51,15 @@ class MMChannel:
         ret = ret.json()
         return ret["url"], ret["key"]
     
-    # def upload_audio(self, audio):
-    #     path_ = "/file/audio/upload"
-    #     with open(audio, "rb") as f:
-    #         ret = requests.post(
-    #             host + path_, files={"file": f}, auth=self._auth
-    #         )
-    #     assert ret.status_code == 200, "upload audio fail"
-    #     ret = ret.json()
-    #     return ret["url"], ret["key"]
+    def upload_audio(self, audio):
+        path_ = "/file/audio/upload"
+        with open(audio, "rb") as f:
+            ret = requests.post(
+                host + path_, files={"file": f}, auth=self._auth
+            )
+        assert ret.status_code == 200, "upload audio fail"
+        ret = ret.json()
+        return ret["url"], ret["key"]
     
     def fake_upload_audio(self, audio):
         with open(audio, "rb") as f:

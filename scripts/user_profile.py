@@ -11,7 +11,6 @@ def main():
             with login_context(user.phone, "123456") as token:
                 
                 profiler = UserProfile(auth=token)
-                print(profiler.get_info())
                 ret = profiler.update_profile(
                     nickname=user.nickname,
                     birthday=user.birthday.strftime("%Y-%m-%dT%H:%M:%SZ"),

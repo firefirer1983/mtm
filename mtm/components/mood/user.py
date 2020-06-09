@@ -28,6 +28,5 @@ class UserProfile:
         ret = requests.put(
             url=host + path_, auth=self._auth, json=profile
         )
-        pdb.set_trace()
         assert ret.status_code == 200, "update profile failed!"
-        return ret.json()
+        return ret.status_code == 200
