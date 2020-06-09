@@ -10,7 +10,7 @@ from mtm.components.mood.channels import MMChannel
 from mtm.config import MAX_DURATION
 from mtm.model.models import MMStorageEntry
 
-ORIGIN = "bilibili"
+ORIGIN = "youtube"
 
 CACHE_REPO = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
 YOUTUBE_CACHE_REPO = os.path.join(CACHE_REPO, ORIGIN)

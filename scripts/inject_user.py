@@ -60,13 +60,6 @@ def main():
                 )
                 with login_context(phone, PASSWORD_OR_VERIFY) as token:
                     channel = MMChannel(token)
-                    # upload_url, upload_key = channel.upload_image(icon)
-                    # profiler = UserProfile(token)
-                    # profiler.update_profile(
-                    #     nickname=nickname,
-                    #     birthday=fk.date_between(),
-                    #     url=
-                    # )
                     upload_url, upload_key = channel.upload_image(icon)
                 user.icon_url = upload_url
                 user.icon_key = upload_key
